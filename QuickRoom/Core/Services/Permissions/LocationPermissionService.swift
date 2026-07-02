@@ -10,27 +10,27 @@ import Observation
 
 @Observable
 @MainActor
-public final class LocationPermissionService: NSObject, CLLocationManagerDelegate {
+final class LocationPermissionService: NSObject, CLLocationManagerDelegate {
 	private let locationManager = CLLocationManager()
 	
-	public private(set) var authorizationStatus: CLAuthorizationStatus
+	private(set) var authorizationStatus: CLAuthorizationStatus
 	private var authContinuation: CheckedContinuation<CLAuthorizationStatus, Never>?
 	
-	public override init() {
+	override init() {
 		self.authorizationStatus = locationManager.authorizationStatus
 		super.init()
 		self.locationManager.delegate = self
 	}
 	
-	public var isFullyAuthorized: Bool {
+	var isFullyAuthorized: Bool {
 		authorizationStatus == .authorizedAlways
 	}
 	
-	public var isNotDetermined: Bool {
+	var isNotDetermined: Bool {
 		authorizationStatus == .notDetermined
 	}
 	
-	public func requestAlways() async {
+	func requestAlways() async {
 		guard authorizationStatus != .authorizedAlways else { return }
 		if authorizationStatus == .notDetermined {
 			await requestWhenInUse()
@@ -45,7 +45,7 @@ public final class LocationPermissionService: NSObject, CLLocationManagerDelegat
 		}
 	}
 	
-	private func requestWhenInUse() async {
+	func requestWhenInUse() async {
 		guard authorizationStatus == .notDetermined else { return }
 		guard authContinuation == nil else { return }
 		
@@ -55,7 +55,7 @@ public final class LocationPermissionService: NSObject, CLLocationManagerDelegat
 		}
 	}
 	
-	public nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+	nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
 		Task { @MainActor in
 			self.authorizationStatus = manager.authorizationStatus
 			

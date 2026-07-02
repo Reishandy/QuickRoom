@@ -16,12 +16,21 @@ struct PermissionSheetView: View {
 	}
 	
 	// TODO: Permission Sheet View UI
-	// TODO: Tell which permission is missing individualy
     var body: some View {
 		VStack {
 			Text("TODO: Permission sheet")
 			Text("TODO: Explanation about each permissions")
 			Text("TODO: And why we need them")
+			
+			// TODO: Tell which permission is missing individualy
+			Text("Location always alowed:")
+			Text(locationPermissionService.isFullyAuthorized ? "Allowed" : "Not Allowed")
+			
+			Text("Notification allowed:")
+			Text(notificationPermissionService.isAuthorized ? "Allowed" : "Not Allowed")
+			
+			Text("Time sensitive notification enabled:")
+			Text(notificationPermissionService.isTimeSensitiveEnabled ? "Enabled" : "Disabled")
 			
 			if shouldShowSettingsRedirect {
 				Button("Go to settings") {

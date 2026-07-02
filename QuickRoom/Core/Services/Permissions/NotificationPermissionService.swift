@@ -10,33 +10,38 @@ import Observation
 
 @Observable
 @MainActor
-public final class NotificationPermissionService {
-	public private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
-	public private(set) var timeSensitiveSetting: UNNotificationSetting = .notSupported
+final class NotificationPermissionService {
+	private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+	private(set) var timeSensitiveSetting: UNNotificationSetting = .notSupported
 	
-	public init() {
+	init() {
 		Task { await checkStatus() }
 	}
 	
-	public var isFullyAuthorized: Bool {
-		let isAuthorized = (authorizationStatus == .authorized || authorizationStatus == .provisional)
-		let isTimeSensitiveEnabled = (timeSensitiveSetting == .enabled)
-		
-		return isAuthorized && isTimeSensitiveEnabled
+	var isFullyAuthorized: Bool {
+		isAuthorized && isTimeSensitiveEnabled
 	}
 	
-	public var isNotDetermined: Bool {
+	var isTimeSensitiveEnabled: Bool {
+		timeSensitiveSetting == .enabled
+	}
+	
+	var isAuthorized: Bool {
+		authorizationStatus == .authorized || authorizationStatus == .provisional
+	}
+	
+	var isNotDetermined: Bool {
 		authorizationStatus == .notDetermined
 	}
 	
-	public func checkStatus() async {
+	func checkStatus() async {
 		let settings = await UNUserNotificationCenter.current().notificationSettings()
 		
 		self.authorizationStatus = settings.authorizationStatus
 		self.timeSensitiveSetting = settings.timeSensitiveSetting
 	}
 	
-	public func requestPermission() async {
+	func requestPermission() async {
 		guard authorizationStatus == .notDetermined else { return }
 	
 		let options: UNAuthorizationOptions = [.alert, .sound, .badge]
