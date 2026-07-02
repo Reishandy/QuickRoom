@@ -27,16 +27,16 @@ struct ContentView: View {
 							.interactiveDismissDisabled()
 							.presentationDetents([.large])
 					}
+					.task {
+						await notificationPermissionService.checkStatus()
+						isPermissionSheetShown = shouldShowPermissionSheet
+					}
 			} else {
 				OnboardingView()
 			}
 		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
 		.padding(20)
-		.task {
-			await notificationPermissionService.checkStatus()
-			isPermissionSheetShown = shouldShowPermissionSheet
-		}
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
 				await notificationPermissionService.checkStatus()
