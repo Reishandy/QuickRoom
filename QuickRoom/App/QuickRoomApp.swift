@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct QuickRoomApp: App {
+	@State var preferenceService = PreferenceService()
+	
     var body: some Scene {
         WindowGroup {
             ContentView()
+				.environment(preferenceService)
         }
     }
 }

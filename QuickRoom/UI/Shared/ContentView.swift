@@ -8,17 +8,22 @@
 import SwiftUI
 
 struct ContentView: View {
+	@Environment(PreferenceService.self) private var preferenceService
+	
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
-        }
-        .padding()
+		NavigationStack {
+			if preferenceService.hasSeenOnboarding {
+				HomeView()
+			} else {
+				OnboardingView()
+			}
+		}
+		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
+		.padding(20)
     }
 }
 
 #Preview {
     ContentView()
+		.environment(PreferenceService())
 }
