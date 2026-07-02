@@ -18,15 +18,11 @@ struct ContentView: View {
 		!locationPermissionService.isFullyAuthorized || !notificationPermissionService.isFullyAuthorized
 	}
 	
+	// TODO: Info.plist wording
     var body: some View {
 		NavigationStack {
 			if preferenceService.hasSeenOnboarding {
-				HomeView()
-					.sheet(isPresented: $isPermissionSheetShown) {
-						PermissionSheetView()
-							.interactiveDismissDisabled()
-							.presentationDetents([.large])
-					}
+				HomeView(shouldShowSheet: !shouldShowPermissionSheet)
 					.task {
 						await notificationPermissionService.checkStatus()
 						isPermissionSheetShown = shouldShowPermissionSheet
@@ -35,8 +31,12 @@ struct ContentView: View {
 				OnboardingView()
 			}
 		}
+		.sheet(isPresented: $isPermissionSheetShown) {
+			PermissionSheetView()
+				.interactiveDismissDisabled()
+				.presentationDetents([.large])
+		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
-		.padding(20)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
 				await notificationPermissionService.checkStatus()
