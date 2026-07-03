@@ -19,6 +19,7 @@ struct ContentView: View {
 	}
 	
 	// TODO: Info.plist wording
+	// TODO: Design tweak (color, spacing, etc)
     var body: some View {
 		NavigationStack {
 			if preferenceService.hasSeenOnboarding {

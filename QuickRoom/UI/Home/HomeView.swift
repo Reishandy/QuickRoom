@@ -11,6 +11,7 @@ struct HomeView: View {
 	let shouldShowSheet: Bool
 	
 	@State private var currentSheetDetent: PresentationDetent = .medium // TODO: Decide default
+	@State private var selectedDate: Date = .now
 	
     var body: some View {
 		VStack {
@@ -21,21 +22,21 @@ struct HomeView: View {
 			get: { shouldShowSheet },
 			set: { _ in }
 		)) {
-			// TODO: Scroll up to 7 days, still discussing
-			// TODO: Make list scrollable only on high
-			// TODO: Use navtitle here
-			Text("TODO: Sheet")
-				.presentationDetents(
-					[.height(85), .medium, .large], // TODO: Define the lowest height
-					selection: $currentSheetDetent
-				)
-				.presentationBackgroundInteraction(.enabled)
-				.interactiveDismissDisabled(true)
-				.presentationDragIndicator(.visible)
+			HomeSheetView(currentSheetDetent: $currentSheetDetent)
+		}
+		.toolbar {
+			ToolbarItem(placement: .principal) {
+				Text(selectedDate.toHomeString())
+					.bold()
+					.padding()
+					.glassEffect()
+			}
 		}
     }
 }
 
 #Preview {
-    HomeView(shouldShowSheet: true)
+	NavigationStack {
+		HomeView(shouldShowSheet: true)
+	}
 }
