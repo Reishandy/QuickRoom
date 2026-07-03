@@ -8,12 +8,23 @@
 import SwiftUI
 
 struct HomeView: View {
-	// TODO: Home view UI
-    var body: some View {
-		Text("This is home")
-    }
+	var onInteract: () -> Void
+	
+	var body: some View {
+		ScrollView(.horizontal, showsIndicators: false) {
+			Image("floorplan")
+				.resizable()
+				.scaledToFit()
+				.containerRelativeFrame(.vertical)
+		}
+		.simultaneousGesture(
+			DragGesture().onChanged { _ in
+				onInteract()
+			}
+		)
+	}
 }
 
 #Preview {
-    HomeView()
+	HomeView() {}
 }

@@ -15,7 +15,7 @@ struct QuickRoomApp: App {
 	
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(isPreview: false)
 				.environment(preferenceService)
 				.environment(locationPermssionService)
 				.environment(notificationPermissionService)
