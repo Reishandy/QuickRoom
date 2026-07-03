@@ -26,6 +26,7 @@ struct TimelineSliderView: View {
 	private let secondaryTickSecond = 300
 	private let tickWidth: CGFloat = 10
 	
+	// TODO: Update latest figma
 	var body: some View {
 		GeometryReader { geometry in
 			let centerPadding = (geometry.size.width / 2) - (tickWidth / 2)

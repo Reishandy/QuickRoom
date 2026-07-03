@@ -11,6 +11,10 @@ struct HomeSheetView: View {
 	@Binding var currentSheetDetent: PresentationDetent
 	@Binding var selectedDate: Date
 	
+	// TODO: Replace reservations object
+	let reservations: [String]
+	let onReservationClick: (String) -> Void
+	
 	@State private var selectedIndex: Int?
 	
 	var body: some View {
@@ -21,16 +25,11 @@ struct HomeSheetView: View {
 			}
 			
 			if currentSheetDetent != .height(90) {
-				ReservationList()
+				ReservationList(reservations: reservations) { reservation in
+					onReservationClick(reservation)
+				}
 			}
 		}
-		.presentationDetents(
-			[.height(90), .medium, .large],
-			selection: $currentSheetDetent
-		)
-		.presentationBackgroundInteraction(.enabled)
-		.interactiveDismissDisabled(true)
-		.presentationDragIndicator(.visible)
 	}
 }
 
@@ -46,7 +45,15 @@ struct HomeSheetView: View {
 	.sheet(isPresented: .constant(true)) {
 		HomeSheetView(
 			currentSheetDetent: $currentSheetDetent,
-			selectedDate: $selectedDate
-		)
+			selectedDate: $selectedDate,
+			reservations: ["1", "2", "3"]
+		) { _ in }
+			.presentationDetents(
+				[.height(90), .medium, .large],
+				selection: $currentSheetDetent
+			)
+			.presentationBackgroundInteraction(.enabled)
+			.interactiveDismissDisabled(true)
+			.presentationDragIndicator(.visible)
 	}
 }
