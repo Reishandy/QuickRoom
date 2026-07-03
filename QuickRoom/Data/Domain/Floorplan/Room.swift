@@ -7,9 +7,8 @@
 
 import Foundation
 
-struct Room: Identifiable {
-	let id = UUID()
+struct Room: Identifiable, Hashable {
+	let id: String
 	let name: String
-	let isDisabled: Bool
 	let relativePoints: [CGPoint]
 }

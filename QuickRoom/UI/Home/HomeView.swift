@@ -8,8 +8,11 @@
 import SwiftUI
 
 struct HomeView: View {
+	@Environment(ReservationService.self) private var reservationService
+	
+	let selectedDate: Date
 	var onInteract: () -> Void
-	let onRoomClick: (UUID) -> Void
+	let onRoomClick: (String) -> Void
 	
 	var body: some View {
 		ScrollView(.horizontal, showsIndicators: false) {
@@ -23,6 +26,7 @@ struct HomeView: View {
 							ForEach(StaticRooms.rooms) { room in
 								RoomOverlayView(
 									room: room,
+									status: reservationService.status(for: room, at: selectedDate),
 									geoSize: geo.size
 								) { roomId in
 									onRoomClick(roomId)
@@ -42,6 +46,7 @@ struct HomeView: View {
 
 #Preview {
 	HomeView(
+		selectedDate: .now,
 		onInteract: {},
 		onRoomClick: { _ in }
 	)
