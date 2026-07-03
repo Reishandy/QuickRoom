@@ -17,7 +17,7 @@ struct ContentView: View {
 	@State private var isPermissionSheetShown = false
 	@State private var currentMainSheetDetent: PresentationDetent = .medium
 	@State private var selectedDate: Date = .now
-	@State private var selectedRoom: String? = nil // TODO: Replace room object
+	@State private var selectedRoomId: UUID? = nil
 	
 	// TODO: Replace reservations object
 	@State private var reservations: [String] = []
@@ -56,7 +56,7 @@ struct ContentView: View {
 				.presentationDragIndicator(.visible)
 		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
-		.animation(.easeInOut, value: selectedRoom)
+		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
 				await notificationPermissionService.checkStatus()
@@ -69,7 +69,7 @@ struct ContentView: View {
 		.onChange(of: notificationPermissionService.isFullyAuthorized) { _, _ in
 			isPermissionSheetShown = shouldShowPermissionSheet
 		}
-		.onChange(of: selectedRoom) { _, _ in
+		.onChange(of: selectedRoomId) { _, _ in
 			currentMainSheetDetent = .medium
 		}
 		.task {
@@ -85,22 +85,16 @@ struct ContentView: View {
 	
 	@ViewBuilder
 	private var baseScreen: some View {
-		if let selectedRoom {
-			NavigationStack {
-				ReserveView()
-					.toolbar {
-						ToolbarItem(placement: .topBarLeading) {
-							Button {
-								self.selectedRoom = nil
-							} label: {
-								Image(systemName: "chevron.left")
-							}
-						}
-					}
-			}
-		} else {
+		ZStack {
 			ZStack(alignment: .top) {
-				HomeView() { currentMainSheetDetent = .height(90) }
+				HomeView(
+					onInteract: {
+						currentMainSheetDetent = .height(90)
+					},
+					onRoomClick: { roomId in
+						selectedRoomId = roomId
+					}
+				)
 				
 				Text(selectedDate.toHomeString())
 					.bold()
@@ -115,12 +109,31 @@ struct ContentView: View {
 					isPermissionSheetShown = shouldShowPermissionSheet
 				}
 			}
+			.opacity(selectedRoomId == nil ? 1 : 0)
+			.allowsHitTesting(selectedRoomId == nil)
+			
+			if let selectedRoomId = selectedRoomId {
+				NavigationStack {
+					ReserveView()
+						.toolbar {
+							ToolbarItem(placement: .topBarLeading) {
+								Button {
+									self.selectedRoomId = nil
+								} label: {
+									Image(systemName: "chevron.left")
+								}
+							}
+						}
+				}
+				.transition(.move(edge: .trailing))
+			}
 		}
+		.animation(.default, value: selectedRoomId)
 	}
 	
 	@ViewBuilder
 	private var sheetScreen: some View {
-		if let selectedRoom {
+		if let selectedRoom = selectedRoomId {
 			ReserveSheetView()
 		} else {
 			HomeSheetView(
@@ -128,7 +141,7 @@ struct ContentView: View {
 				selectedDate: $selectedDate,
 				reservations: reservations
 			) { reservation in
-				selectedRoom = reservation
+				// TODO: Match the room id
 			}
 		}
 	}

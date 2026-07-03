@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HomeView: View {
 	var onInteract: () -> Void
+	let onRoomClick: (UUID) -> Void
 	
 	var body: some View {
 		ScrollView(.horizontal, showsIndicators: false) {
@@ -16,6 +17,20 @@ struct HomeView: View {
 				.resizable()
 				.scaledToFit()
 				.containerRelativeFrame(.vertical)
+				.overlay {
+					GeometryReader { geo in
+						ZStack {
+							ForEach(StaticRooms.rooms) { room in
+								RoomOverlayView(
+									room: room,
+									geoSize: geo.size
+								) { roomId in
+									onRoomClick(roomId)
+								}
+							}
+						}
+					}
+				}
 		}
 		.simultaneousGesture(
 			DragGesture().onChanged { _ in
@@ -26,5 +41,8 @@ struct HomeView: View {
 }
 
 #Preview {
-	HomeView() {}
+	HomeView(
+		onInteract: {},
+		onRoomClick: { _ in }
+	)
 }
