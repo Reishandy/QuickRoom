@@ -8,19 +8,20 @@
 import SwiftUI
 
 struct ReservationList: View {
-	// TODO: Replace reservations object
-	let reservations: [String]
+	let reservations: [Reservation]
 	let onReservationClick: (String) -> Void
-	
 	@State private var showInlineTitle = false
 	
+	private var myReservations: [Reservation] {
+		reservations.filter { $0.isMyReservation }
+	}
+	
 	var body: some View {
-		if reservations.isEmpty {
+		if myReservations.isEmpty {
 			VStack(spacing: 12) {
 				Image(systemName: "hand.tap")
 					.font(.system(size: 48))
 					.foregroundStyle(Color(UIColor.systemBlue))
-				
 				Text("Select a room to reserve")
 					.font(.title)
 					.foregroundStyle(.secondary)
@@ -34,14 +35,12 @@ struct ReservationList: View {
 						.bold()
 						.listRowSeparator(.hidden)
 					
-					// TODO: Change to reservations
-					ForEach(0...reservations.count - 1, id:\.self) { num in
+					ForEach(myReservations) { reservation in
 						Button {
-							onReservationClick("Reservatino \(num) detail")
+							onReservationClick(reservation.roomId)
 						} label: {
-							listItem(num)
+							listItem(for: reservation)
 						}
-						
 						.alignmentGuide(.listRowSeparatorLeading) { dimensions in
 							dimensions[.leading]
 						}
@@ -68,28 +67,24 @@ struct ReservationList: View {
 		}
 	}
 	
-	private func listItem(_ num: Int) -> some View {
-		// TODO: Remove placeholder
-		let calendar = Calendar.current
-		let startDate = calendar.date(byAdding: .day, value: num, to: .now) ?? .now
-		let endDate = calendar.date(byAdding: .hour, value: 3, to: startDate) ?? startDate
-		let dynamicInterval = DateInterval(start: startDate, end: endDate)
+	private func listItem(for reservation: Reservation) -> some View {
+		let room = StaticRooms.rooms.first(where: { $0.id == reservation.roomId })
+		let roomName = room?.name ?? "Unknown Room"
+		
+		let dynamicInterval = DateInterval(start: reservation.startTime, end: reservation.endTime)
 		
 		return HStack(spacing: 12) {
-			Image(systemName: "car.circle.fill")
+			Image(systemName: "door.left.hand.closed")
 				.foregroundStyle(.blue.gradient)
 				.font(.largeTitle)
 			
 			VStack(alignment: .leading, spacing: 4) {
-				Text("Reservation \(num)")
+				Text(roomName)
 					.bold()
-				
 				Text(dynamicInterval.toReservationString())
 					.foregroundStyle(.secondary)
 			}
-			
 			Spacer()
-			
 			Image(systemName: "chevron.right")
 				.foregroundStyle(.secondary)
 		}
@@ -97,7 +92,15 @@ struct ReservationList: View {
 }
 
 #Preview {
-	ReservationList(reservations: ["1", "2", "3"]) { _ in }
+	ReservationList(reservations: [
+		Reservation(
+			id: UUID().uuidString,
+			roomId: "room-a",
+			isMyReservation: true,
+			startTime: .now,
+			endTime: .now.addingTimeInterval(3600)
+		)
+	]) { _ in }
 }
 
 #Preview {

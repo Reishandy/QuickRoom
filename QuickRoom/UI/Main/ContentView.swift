@@ -11,17 +11,15 @@ struct ContentView: View {
 	@Environment(PreferenceService.self) private var preferenceService
 	@Environment(LocationPermissionService.self) private var locationPermissionService
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
+	@Environment(ReservationService.self) private var reservationService
 	
 	let isPreview: Bool
 	
 	@State private var isPermissionSheetShown = false
 	@State private var currentMainSheetDetent: PresentationDetent = .medium
 	@State private var selectedDate: Date = .now
-	@State private var selectedRoomId: UUID? = nil
-	
-	// TODO: Replace reservations object
-	@State private var reservations: [String] = []
-	// TODO: List of rooms
+	@State private var selectedIndex: Int? = nil
+	@State private var selectedRoomId: String? = nil
 	
 	private var shouldShowPermissionSheet: Bool {
 		!locationPermissionService.isFullyAuthorized || !notificationPermissionService.isFullyAuthorized
@@ -29,6 +27,8 @@ struct ContentView: View {
 	
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
+	// TODO: Consolidate working hours
+	// TODO: Loading state for UI
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding {
@@ -73,13 +73,7 @@ struct ContentView: View {
 			currentMainSheetDetent = .medium
 		}
 		.task {
-			// TODO: Network populate
-			// TODO: Skeleton?
-			DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-				withAnimation {
-					reservations = ["1", "2", "3"]
-				}
-			}
+			try? await reservationService.fetchReservationsOnLoad()
 		}
 	}
 	
@@ -88,12 +82,9 @@ struct ContentView: View {
 		ZStack {
 			ZStack(alignment: .top) {
 				HomeView(
-					onInteract: {
-						currentMainSheetDetent = .height(90)
-					},
-					onRoomClick: { roomId in
-						selectedRoomId = roomId
-					}
+					selectedDate: selectedDate,
+					onInteract: { currentMainSheetDetent = .height(90) },
+					onRoomClick: { roomId in selectedRoomId = roomId }
 				)
 				
 				Text(selectedDate.toHomeString())
@@ -114,7 +105,7 @@ struct ContentView: View {
 			
 			if let selectedRoomId = selectedRoomId {
 				NavigationStack {
-					ReserveView()
+					ReserveView(roomId: selectedRoomId)
 						.toolbar {
 							ToolbarItem(placement: .topBarLeading) {
 								Button {
@@ -134,14 +125,15 @@ struct ContentView: View {
 	@ViewBuilder
 	private var sheetScreen: some View {
 		if let selectedRoom = selectedRoomId {
-			ReserveSheetView()
+			ReserveSheetView(roomId: selectedRoom)
 		} else {
 			HomeSheetView(
 				currentSheetDetent: $currentMainSheetDetent,
 				selectedDate: $selectedDate,
-				reservations: reservations
-			) { reservation in
-				// TODO: Match the room id
+				selectedIndex: $selectedIndex,
+				reservations: reservationService.reservations
+			) { roomId in
+				selectedRoomId = roomId
 			}
 		}
 	}
@@ -152,4 +144,5 @@ struct ContentView: View {
 		.environment(PreferenceService())
 		.environment(LocationPermissionService())
 		.environment(NotificationPermissionService())
+		.environment(ReservationService())
 }

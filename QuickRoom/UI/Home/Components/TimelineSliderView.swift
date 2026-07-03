@@ -12,6 +12,8 @@ struct TimelineSliderView: View {
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
 	
+	@State private var scrollPosition = ScrollPosition(idType: Int.self)
+	
 	@State private var ticks: [TimelineTick]
 	@State private var minAllowedIndex: Int = 0
 	@State private var boundaryHitTrigger: Int = 0
@@ -48,7 +50,7 @@ struct TimelineSliderView: View {
 					}
 					.scrollTargetLayout()
 				}
-				.scrollPosition(id: $selectedIndex)
+				.scrollPosition($scrollPosition)
 				.scrollTargetBehavior(.viewAligned)
 				.safeAreaPadding(.horizontal, centerPadding)
 				.mask {
@@ -63,6 +65,11 @@ struct TimelineSliderView: View {
 						endPoint: .trailing
 					)
 				}
+				.onChange(of: scrollPosition) { _, newPosition in
+					if let newIndex = newPosition.viewID as? Int, selectedIndex != newIndex {
+						selectedIndex = newIndex
+					}
+				}
 				.onChange(of: selectedIndex) { _, newIndex in
 					guard let newIndex, ticks.indices.contains(newIndex) else { return }
 					
@@ -74,6 +81,10 @@ struct TimelineSliderView: View {
 						}
 					} else {
 						selectedDate = ticks[newIndex].date
+					}
+					
+					if scrollPosition.viewID as? Int != newIndex {
+						scrollPosition.scrollTo(id: newIndex)
 					}
 				}
 				
@@ -120,6 +131,10 @@ struct TimelineSliderView: View {
 			
 			if selectedIndex == nil {
 				selectedIndex = minAllowedIndex
+			}
+			
+			if let selectedIndex {
+				scrollPosition.scrollTo(id: selectedIndex)
 			}
 		}
 		.onReceive(timer) { _ in

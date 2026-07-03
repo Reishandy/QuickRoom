@@ -12,6 +12,7 @@ struct QuickRoomApp: App {
 	@State var preferenceService = PreferenceService()
 	@State var locationPermssionService = LocationPermissionService()
 	@State var notificationPermissionService = NotificationPermissionService()
+	@State var reservationService = ReservationService()
 	
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,7 @@ struct QuickRoomApp: App {
 				.environment(preferenceService)
 				.environment(locationPermssionService)
 				.environment(notificationPermissionService)
+				.environment(reservationService)
         }
     }
 }

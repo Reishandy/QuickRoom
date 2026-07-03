@@ -10,12 +10,10 @@ import SwiftUI
 struct HomeSheetView: View {
 	@Binding var currentSheetDetent: PresentationDetent
 	@Binding var selectedDate: Date
+	@Binding var selectedIndex: Int?
 	
-	// TODO: Replace reservations object
-	let reservations: [String]
+	let reservations: [Reservation]
 	let onReservationClick: (String) -> Void
-	
-	@State private var selectedIndex: Int?
 	
 	var body: some View {
 		VStack {
@@ -36,6 +34,7 @@ struct HomeSheetView: View {
 #Preview {
 	@Previewable @State var currentSheetDetent: PresentationDetent = .medium
 	@Previewable @State var selectedDate: Date = .now
+	@Previewable @State var selectedIndex: Int? = nil
 	
 	Group {
 		Text("This is home")
@@ -46,7 +45,8 @@ struct HomeSheetView: View {
 		HomeSheetView(
 			currentSheetDetent: $currentSheetDetent,
 			selectedDate: $selectedDate,
-			reservations: ["1", "2", "3"]
+			selectedIndex: $selectedIndex,
+			reservations: []
 		) { _ in }
 			.presentationDetents(
 				[.height(90), .medium, .large],
