@@ -18,7 +18,7 @@ struct ReservationList: View {
 		if reservations.isEmpty {
 			VStack(spacing: 12) {
 				Image(systemName: "hand.tap")
-					.font(.largeTitle)
+					.font(.system(size: 48))
 					.foregroundStyle(Color(UIColor.systemBlue))
 				
 				Text("Select a room to reserve")
