@@ -37,7 +37,7 @@ struct ReservationList: View {
 					
 					ForEach(myReservations) { reservation in
 						Button {
-							onReservationClick(reservation.id)
+							onReservationClick(reservation.roomId)
 						} label: {
 							listItem(for: reservation)
 						}

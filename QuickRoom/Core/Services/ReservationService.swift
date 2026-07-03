@@ -105,12 +105,10 @@ class ReservationService {
 					if let startTime = calendar.date(bySettingHour: currentStartHour, minute: randomMinuteStart, second: 0, of: currentDate),
 					   let endTime = calendar.date(byAdding: .minute, value: duration, to: startTime) {
 						
-						let isMine = Int.random(in: 1...50) == 1
-						
 						let reservation = Reservation(
 							id: UUID().uuidString,
 							roomId: room.id,
-							isMyReservation: isMine,
+							isMyReservation: false,
 							startTime: startTime,
 							endTime: endTime
 						)

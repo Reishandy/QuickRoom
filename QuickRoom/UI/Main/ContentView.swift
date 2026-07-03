@@ -27,6 +27,8 @@ struct ContentView: View {
 	
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
+	// TODO: Consolidate working hours
+	// TODO: Loading state for UI
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding {
@@ -103,7 +105,7 @@ struct ContentView: View {
 			
 			if let selectedRoomId = selectedRoomId {
 				NavigationStack {
-					ReserveView()
+					ReserveView(roomId: selectedRoomId)
 						.toolbar {
 							ToolbarItem(placement: .topBarLeading) {
 								Button {
@@ -123,7 +125,7 @@ struct ContentView: View {
 	@ViewBuilder
 	private var sheetScreen: some View {
 		if let selectedRoom = selectedRoomId {
-			ReserveSheetView()
+			ReserveSheetView(roomId: selectedRoom)
 		} else {
 			HomeSheetView(
 				currentSheetDetent: $currentMainSheetDetent,
