@@ -10,17 +10,18 @@ import SwiftUI
 struct HomeView: View {
 	let shouldShowSheet: Bool
 	
-	@State private var currentSheetDetent: PresentationDetent = .medium // TODO: Decide default
+	@State private var currentSheetDetent: PresentationDetent = .medium
 	@State private var selectedDate: Date = .now
 	
     var body: some View {
 		ZStack(alignment: .top) {
-			FloorPlanView() { currentSheetDetent = .height(80) }
+			FloorPlanView() { currentSheetDetent = .height(100) }
 			
 			Text(selectedDate.toHomeString())
 				.bold()
 				.padding()
-				.glassEffect()
+				.background(.thinMaterial, in: Capsule())
+				.shadow(color: .black.opacity(0.15), radius: 8, y: 4)
 				.padding(.top, 60)
 		}
 		.sheet(isPresented: Binding(

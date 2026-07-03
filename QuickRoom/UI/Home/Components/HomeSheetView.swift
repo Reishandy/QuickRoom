@@ -15,14 +15,15 @@ struct HomeSheetView: View {
 		VStack {
 			if currentSheetDetent != .large {
 				TimelineSliderView(selectedDate: $selectedDate)
+					.padding(.top, currentSheetDetent == .medium ? 20 : 40)
 			}
 			
-			if currentSheetDetent != .height(80) {
+			if currentSheetDetent != .height(100) {
 				ReservationList()
 			}
 		}
 		.presentationDetents(
-			[.height(80), .medium, .large], // TODO: Define the lowest height
+			[.height(100), .medium, .large],
 			selection: $currentSheetDetent
 		)
 		.presentationBackgroundInteraction(.enabled)
