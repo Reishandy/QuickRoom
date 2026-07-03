@@ -15,7 +15,7 @@ struct HomeView: View {
 	
     var body: some View {
 		ZStack(alignment: .top) {
-			FloorPlanView() { currentSheetDetent = .height(100) }
+			FloorPlanView() { currentSheetDetent = .height(90) }
 			
 			Text(selectedDate.toHomeString())
 				.bold()

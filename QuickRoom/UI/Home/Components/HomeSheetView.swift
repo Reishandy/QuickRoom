@@ -11,19 +11,21 @@ struct HomeSheetView: View {
 	@Binding var currentSheetDetent: PresentationDetent
 	@Binding var selectedDate: Date
 	
+	@State private var selectedIndex: Int?
+	
 	var body: some View {
 		VStack {
 			if currentSheetDetent != .large {
-				TimelineSliderView(selectedDate: $selectedDate)
-					.padding(.top, currentSheetDetent == .medium ? 20 : 40)
+				TimelineSliderView(selectedDate: $selectedDate, selectedIndex: $selectedIndex)
+					.padding(.top, currentSheetDetent == .medium ? 20 : 30)
 			}
 			
-			if currentSheetDetent != .height(100) {
+			if currentSheetDetent != .height(90) {
 				ReservationList()
 			}
 		}
 		.presentationDetents(
-			[.height(100), .medium, .large],
+			[.height(90), .medium, .large],
 			selection: $currentSheetDetent
 		)
 		.presentationBackgroundInteraction(.enabled)

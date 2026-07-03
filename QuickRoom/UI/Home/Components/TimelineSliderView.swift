@@ -10,8 +10,8 @@ import Combine
 
 struct TimelineSliderView: View {
 	@Binding var selectedDate: Date
+	@Binding var selectedIndex: Int?
 	
-	@State private var selectedIndex: Int?
 	@State private var minAllowedIndex: Int = 0
 	@State private var boundaryHitTrigger: Int = 0
 	@State private var nowIndex: Int = 0
@@ -22,7 +22,7 @@ struct TimelineSliderView: View {
 	}()
 
 	// 12 ticks per hour (5-minute intervals).
-	private let tickRange = -999999999...999999999 // TODO: Decide the range
+	private let tickRange = -1000...100_000 // TODO: Decide the range
 	private let secondaryTickSecond = 300
 	private let tickWidth: CGFloat = 10
 	
@@ -73,10 +73,11 @@ struct TimelineSliderView: View {
 							Image(systemName: "arrowshape.backward.fill")
 								.foregroundStyle(Color(uiColor: .systemBlue))
 								.font(.title2)
-								.frame(width: 40, height: 40)
+								.frame(height: 32)
 						}
 						.buttonStyle(.glass)
-						.padding(.leading, 20)
+						.padding(.leading, 30)
+						.padding(.top, 8)
 						
 						Spacer()
 					}
@@ -96,10 +97,13 @@ struct TimelineSliderView: View {
 				)
 			}
 		}
-		.frame(height: 75)
+		.frame(height: 70)
 		.onAppear {
 			updateCurrentTimeConstraints()
-			selectedIndex = minAllowedIndex
+			
+			if selectedIndex == nil {
+				selectedIndex = minAllowedIndex
+			}
 		}
 		.onReceive(timer) { _ in
 			updateCurrentTimeConstraints()
@@ -117,7 +121,7 @@ struct TimelineSliderView: View {
 		VStack(spacing: 8) {
 			Capsule()
 				.fill(isNow ? Color(uiColor: .systemBlue) : (isHour ? Color(uiColor: .label) : Color(uiColor: .quaternaryLabel)))
-				.frame(width: 2, height: 38)
+				.frame(width: 2, height: 32)
 				.padding(.top, 8)
 			
 			if isNow {
@@ -141,11 +145,16 @@ struct TimelineSliderView: View {
 		
 		nowIndex = currentIndex
 		minAllowedIndex = currentIndex
+		
+		if selectedIndex ?? 0 < nowIndex {
+			selectedIndex = currentIndex
+		}
 	}
 }
 
 #Preview {
 	@Previewable @State var selectedDate: Date = .now
+	@Previewable @State var selectedIndex: Int?
 	
-	TimelineSliderView(selectedDate: $selectedDate)
+	TimelineSliderView(selectedDate: $selectedDate, selectedIndex: $selectedIndex)
 }
