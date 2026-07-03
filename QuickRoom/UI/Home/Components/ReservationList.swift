@@ -87,6 +87,11 @@ struct ReservationList: View {
 				Text(dynamicInterval.toReservationString())
 					.foregroundStyle(.secondary)
 			}
+			
+			Spacer()
+			
+			Image(systemName: "chevron.right")
+				.foregroundStyle(.secondary)
 		}
 	}
 }

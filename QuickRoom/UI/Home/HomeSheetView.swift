@@ -21,7 +21,7 @@ struct HomeSheetView: View {
 		VStack {
 			if currentSheetDetent != .large {
 				TimelineSliderView(selectedDate: $selectedDate, selectedIndex: $selectedIndex)
-					.padding(.top, 20)
+					.padding(.top, 25)
 			}
 			
 			if currentSheetDetent != .height(90) {
