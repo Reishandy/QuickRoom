@@ -14,23 +14,23 @@ struct HomeView: View {
 	@State private var selectedDate: Date = .now
 	
     var body: some View {
-		VStack {
-			FloorPlanView() { currentSheetDetent = .height(85) }
+		ZStack(alignment: .top) {
+			FloorPlanView() { currentSheetDetent = .height(80) }
+			
+			Text(selectedDate.toHomeString())
+				.bold()
+				.padding()
+				.glassEffect()
+				.padding(.top, 60)
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.sheet(isPresented: Binding(
 			get: { shouldShowSheet },
 			set: { _ in }
 		)) {
-			HomeSheetView(currentSheetDetent: $currentSheetDetent)
-		}
-		.toolbar {
-			ToolbarItem(placement: .principal) {
-				Text(selectedDate.toHomeString())
-					.bold()
-					.padding()
-					.glassEffect()
-			}
+			HomeSheetView(
+				currentSheetDetent: $currentSheetDetent,
+				selectedDate: $selectedDate
+			)
 		}
     }
 }

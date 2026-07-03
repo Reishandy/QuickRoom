@@ -9,22 +9,20 @@ import SwiftUI
 
 struct HomeSheetView: View {
 	@Binding var currentSheetDetent: PresentationDetent
+	@Binding var selectedDate: Date
 	
-	// TODO: Scroll up to 7 days, still discussing
-	// TODO: Make if we snap to day it updates with current time
 	var body: some View {
 		VStack {
 			if currentSheetDetent != .large {
-				Text("1")
-					.padding(.bottom, 50)
+				TimelineSliderView(selectedDate: $selectedDate)
 			}
 			
-			if currentSheetDetent != .height(85) {
+			if currentSheetDetent != .height(80) {
 				ReservationList()
 			}
 		}
 		.presentationDetents(
-			[.height(85), .medium, .large], // TODO: Define the lowest height
+			[.height(80), .medium, .large], // TODO: Define the lowest height
 			selection: $currentSheetDetent
 		)
 		.presentationBackgroundInteraction(.enabled)
@@ -35,6 +33,7 @@ struct HomeSheetView: View {
 
 #Preview {
 	@Previewable @State var currentSheetDetent: PresentationDetent = .medium
+	@Previewable @State var selectedDate: Date = .now
 	
 	Group {
 		Text("This is home")
@@ -42,6 +41,9 @@ struct HomeSheetView: View {
 	.frame(maxWidth: .infinity, maxHeight: .infinity)
 	.background(.secondary)
 	.sheet(isPresented: .constant(true)) {
-		HomeSheetView(currentSheetDetent: $currentSheetDetent)
+		HomeSheetView(
+			currentSheetDetent: $currentSheetDetent,
+			selectedDate: $selectedDate
+		)
 	}
 }

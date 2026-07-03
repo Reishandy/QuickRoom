@@ -22,6 +22,9 @@ struct ReservationList: View {
 				// TODO: Populate
 				ForEach(0...19, id:\.self) { num in
 					listItem(num)
+						.alignmentGuide(.listRowSeparatorLeading) { dimensions in
+							dimensions[.leading]
+						}
 				}
 			}
 			.listStyle(.plain)
