@@ -14,6 +14,10 @@ struct QuickRoomApp: App {
 	@State var notificationPermissionService = NotificationPermissionService()
 	@State var reservationService = ReservationService()
 	
+	init() {
+		_ = BeaconMonitoringService.shared
+	}
+	
     var body: some Scene {
         WindowGroup {
             ContentView(isPreview: false)
