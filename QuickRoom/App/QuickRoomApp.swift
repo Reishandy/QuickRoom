@@ -13,7 +13,8 @@ struct QuickRoomApp: App {
 	@State var locationPermssionService = LocationPermissionService()
 	@State var notificationPermissionService = NotificationPermissionService()
 	@State var reservationService = ReservationService()
-	
+	@State var authService = AuthService.shared
+
 	init() {
 		_ = BeaconMonitoringService.shared
 	}
@@ -25,6 +26,7 @@ struct QuickRoomApp: App {
 				.environment(locationPermssionService)
 				.environment(notificationPermissionService)
 				.environment(reservationService)
+				.environment(authService)
         }
     }
 }
