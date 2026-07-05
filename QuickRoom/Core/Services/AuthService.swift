@@ -51,6 +51,10 @@ final class AuthService {
 			KeychainStore.currentUserJSON = String(data: data, encoding: .utf8)
 		}
 		currentUser = response.user
+
+		// A device token uploaded before sign-in was deferred (401); now
+		// there's a session to attach it to.
+		await PushRegistrar.shared.flushPendingToken()
 	}
 
 	func signOut() async {
