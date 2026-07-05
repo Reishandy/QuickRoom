@@ -17,6 +17,9 @@ struct QuickRoomApp: App {
 
 	init() {
 		_ = BeaconMonitoringService.shared
+		Task {
+			await BeaconDirectory.shared.refresh()
+		}
 	}
 	
     var body: some Scene {
