@@ -16,9 +16,7 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate, UNUser
 	
 	private let locationManager = CLLocationManager()
 	private var isRanging = false
-	
-	// TODO: change and move to xconfig
-	private let targetUUID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+	private let targetUUID = AppConfig.Beacon.proximityUUID
 	
 	private override init() {
 		super.init()
