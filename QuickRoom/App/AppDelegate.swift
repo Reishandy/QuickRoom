@@ -12,7 +12,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
 		
 		_ = BeaconMonitoringService.shared
-		
+
 		return true
+	}
+
+	func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+		Task {
+			await PushRegistrar.shared.handleToken(deviceToken)
+		}
+	}
+
+	func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+		print("PushRegistrar: APNs registration failed: \(error)")
 	}
 }

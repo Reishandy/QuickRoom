@@ -36,9 +36,15 @@ final class NotificationPermissionService {
 	
 	func checkStatus() async {
 		let settings = await UNUserNotificationCenter.current().notificationSettings()
-		
+
 		self.authorizationStatus = settings.authorizationStatus
 		self.timeSensitiveSetting = settings.timeSensitiveSetting
+
+		// Runs from init and on every foreground, so this covers both
+		// "granted just now" and "already granted at launch".
+		if isAuthorized {
+			PushRegistrar.shared.requestRegistration()
+		}
 	}
 	
 	func requestPermission() async {

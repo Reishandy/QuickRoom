@@ -9,6 +9,7 @@ import SwiftUI
 
 @main
 struct QuickRoomApp: App {
+	@UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 	@State var preferenceService = PreferenceService()
 	@State var locationPermssionService = LocationPermissionService()
 	@State var notificationPermissionService = NotificationPermissionService()
