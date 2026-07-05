@@ -44,7 +44,7 @@ struct ReserveView: View {
 
 #Preview {
 	NavigationStack {
-		ReserveView(roomId: "room-a")
+		ReserveView(roomId: "ws-agung")
 			.environment(ReservationService())
 	}
 }

@@ -15,6 +15,7 @@
 		8B35E7CF2FF5F41400C0F97F /* QuickRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuickRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B35F0012FF9F48200C0F97F /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
 		8B35F0032FF9F48700C0F97F /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		9A0000000000000000000001 /* QuickRoomTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = QuickRoomTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -36,10 +37,22 @@
 			path = QuickRoom;
 			sourceTree = "<group>";
 		};
+		9A0000000000000000000002 /* QuickRoomTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = QuickRoomTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		8B35E7CC2FF5F41400C0F97F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9A000000000000000000000A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -53,6 +66,7 @@
 			isa = PBXGroup;
 			children = (
 				8B35E7D12FF5F41400C0F97F /* QuickRoom */,
+				9A0000000000000000000002 /* QuickRoomTests */,
 				8B35E7D02FF5F41400C0F97F /* Products */,
 				8B35F0012FF9F48200C0F97F /* Debug.xcconfig */,
 				8B35F0032FF9F48700C0F97F /* Release.xcconfig */,
@@ -63,6 +77,7 @@
 			isa = PBXGroup;
 			children = (
 				8B35E7CF2FF5F41400C0F97F /* QuickRoom.app */,
+				9A0000000000000000000001 /* QuickRoomTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,7 +107,48 @@
 			productReference = 8B35E7CF2FF5F41400C0F97F /* QuickRoom.app */;
 			productType = "com.apple.product-type.application";
 		};
+		9A0000000000000000000003 /* QuickRoomTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9A0000000000000000000006 /* Build configuration list for PBXNativeTarget "QuickRoomTests" */;
+			buildPhases = (
+				9A0000000000000000000009 /* Sources */,
+				9A000000000000000000000A /* Frameworks */,
+				9A000000000000000000000B /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9A0000000000000000000005 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9A0000000000000000000002 /* QuickRoomTests */,
+			);
+			name = QuickRoomTests;
+			packageProductDependencies = (
+			);
+			productName = QuickRoomTests;
+			productReference = 9A0000000000000000000001 /* QuickRoomTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
+
+/* Begin PBXContainerItemProxy section */
+		9A0000000000000000000004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B35E7C72FF5F41400C0F97F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B35E7CE2FF5F41400C0F97F;
+			remoteInfo = QuickRoom;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXTargetDependency section */
+		9A0000000000000000000005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8B35E7CE2FF5F41400C0F97F /* QuickRoom */;
+			targetProxy = 9A0000000000000000000004 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXProject section */
 		8B35E7C72FF5F41400C0F97F /* Project object */ = {
@@ -104,6 +160,10 @@
 				TargetAttributes = {
 					8B35E7CE2FF5F41400C0F97F = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					9A0000000000000000000003 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = 8B35E7CE2FF5F41400C0F97F;
 					};
 				};
 			};
@@ -122,6 +182,7 @@
 			projectRoot = "";
 			targets = (
 				8B35E7CE2FF5F41400C0F97F /* QuickRoom */,
+				9A0000000000000000000003 /* QuickRoomTests */,
 			);
 		};
 /* End PBXProject section */
@@ -136,10 +197,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		9A000000000000000000000B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		8B35E7CB2FF5F41400C0F97F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9A0000000000000000000009 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -356,6 +431,46 @@
 			};
 			name = Release;
 		};
+		9A0000000000000000000007 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.radar.QuickRoomTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/QuickRoom";
+			};
+			name = Debug;
+		};
+		9A0000000000000000000008 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.radar.QuickRoomTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/QuickRoom.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/QuickRoom";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -373,6 +488,15 @@
 			buildConfigurations = (
 				8B35E7DB2FF5F41600C0F97F /* Debug */,
 				8B35E7DC2FF5F41600C0F97F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9A0000000000000000000006 /* Build configuration list for PBXNativeTarget "QuickRoomTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A0000000000000000000007 /* Debug */,
+				9A0000000000000000000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

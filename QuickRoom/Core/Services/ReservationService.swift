@@ -7,113 +7,110 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 @Observable
 class ReservationService {
 	var rooms: [Room] = []
 	var reservations: [Reservation] = []
 	var isLoading: Bool = false
-	
-	init() {
+	var serverBacked: Set<String> = []
+
+	private let client: APIClient
+	private let auth: AuthService
+	private var refreshTask: Task<Void, Never>?
+
+	init(client: APIClient = .shared, auth: AuthService = .shared) {
+		self.client = client
+		self.auth = auth
 		self.rooms = StaticRooms.rooms
-		generateInitialMockData()
 	}
-	
-	// TODO: Replace with network
+
 	// TODO: Reservation rule
 	func fetchReservationsOnLoad() async throws {
 		isLoading = true
 		defer { isLoading = false }
-		
-		// Simulate a 1.5-second network delay
-		try await Task.sleep(nanoseconds: 1_500_000_000)
+		try await refresh()
+		startAutoRefresh()
 	}
-	
+
 	func reserve(roomId: String, startTime: Date, endTime: Date) async throws {
-		try await Task.sleep(nanoseconds: 1_000_000_000)
-		
-		let newReservation = Reservation(
-			id: UUID().uuidString,
-			roomId: roomId,
-			isMyReservation: true,
-			startTime: startTime,
-			endTime: endTime
-		)
-		
-		reservations.append(newReservation)
+		let _: ReservationDTO = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: roomId, startTime: startTime, endTime: endTime))
+		try await refresh()
 	}
-	
+
 	func cancelReservation(reservationId: String) async throws {
-		try await Task.sleep(nanoseconds: 1_000_000_000)
-		
-		reservations.removeAll { $0.id == reservationId }
+		let _: ReservationDTO = try await client.post("/reservations/\(reservationId)/cancel")
+		try await refresh()
 	}
-	
+
 	func status(for room: Room, at time: Date) -> RoomStatus {
+		guard serverBacked.contains(room.id) else {
+			return .disabled
+		}
 		guard Calendar.current.isWithinWorkingHours(time) else {
 			return .disabled
 		}
-		
+
 		let activeReservation = reservations.first { reservation in
 			reservation.roomId == room.id && time >= reservation.startTime && time < reservation.endTime
 		}
-		
+
 		if let reservation = activeReservation {
 			return .reserved(isMine: reservation.isMyReservation)
 		}
-		
+
 		return .available
 	}
-	
-	// TODO: Remove
-	private func generateInitialMockData() {
-		var generatedReservations: [Reservation] = []
-		let calendar = Calendar.current
-		let now = Date()
-		
-		// Generate schedule for today + the next 6 days
-		for dayOffset in 0..<7 {
-			guard let currentDate = calendar.date(byAdding: .day, value: dayOffset, to: now) else { continue }
-			
-			for room in self.rooms {
-				// Simulate a busy environment: 3 to 6 meetings per room, per day
-				let meetingsCount = Int.random(in: 3...6)
-				
-				// Start the scheduling day around 7:00 AM
-				var currentStartHour = 7
-				
-				for _ in 0..<meetingsCount {
-					// Add a random gap between meetings (0 to 2 hours)
-					currentStartHour += Int.random(in: 0...2)
-					
-					// Stop scheduling if we hit 7:00 PM (19:00)
-					if currentStartHour >= 19 { break }
-					
-					// Randomize meeting duration (30, 60, 90, or 120 minutes)
-					let durationOptions = [30, 60, 90, 120]
-					let duration = durationOptions.randomElement() ?? 60
-					let randomMinuteStart = [0, 15, 30, 45].randomElement()!
-					
-					if let startTime = calendar.date(bySettingHour: currentStartHour, minute: randomMinuteStart, second: 0, of: currentDate),
-					   let endTime = calendar.date(byAdding: .minute, value: duration, to: startTime) {
-						
-						let reservation = Reservation(
-							id: UUID().uuidString,
-							roomId: room.id,
-							isMyReservation: false,
-							startTime: startTime,
-							endTime: endTime
-						)
-						
-						generatedReservations.append(reservation)
-					}
-					
-					// Advance the hour tracker so the next meeting doesn't overlap
-					currentStartHour += (duration / 60) + 1
+
+	private func refresh() async throws {
+		async let roomsResponse: RoomsResponse = client.get("/rooms")
+		async let reservationsResponse: ReservationsResponse = client.get("/reservations")
+		let (serverRooms, serverReservations) = try await (roomsResponse.rooms, reservationsResponse.reservations)
+
+		let overlay = Self.overlayServerRooms(onto: StaticRooms.rooms, server: serverRooms)
+		rooms = overlay.rooms
+		serverBacked = overlay.serverBacked
+		reservations = Self.mapReservations(serverReservations, myUserId: auth.currentUser?.userId)
+	}
+
+	/// Static polygons + live server names. A mapped room the server no
+	/// longer reports stays visible but renders disabled via `serverBacked`.
+	static func overlayServerRooms(onto staticRooms: [Room], server: [RoomDTO]) -> (rooms: [Room], serverBacked: Set<String>) {
+		let byWorkspaceId = Dictionary(uniqueKeysWithValues: server.map { ($0.zoomWorkspaceId, $0) })
+		let rooms = staticRooms.map { room in
+			guard let dto = byWorkspaceId[room.id] else { return room }
+			return Room(id: room.id, name: dto.name, relativePoints: room.relativePoints)
+		}
+		return (rooms, Set(staticRooms.map(\.id).filter { byWorkspaceId[$0] != nil }))
+	}
+
+	/// Only `booked` reservations block a room; no-shows, releases and
+	/// cancellations free it.
+	static func mapReservations(_ dtos: [ReservationDTO], myUserId: String?) -> [Reservation] {
+		dtos.filter { $0.status == "booked" }.map { dto in
+			Reservation(
+				id: dto.reservationId,
+				roomId: dto.zoomWorkspaceId,
+				isMyReservation: myUserId != nil && dto.bookedByUserId == myUserId,
+				startTime: dto.startTime,
+				endTime: dto.endTime
+			)
+		}
+	}
+
+	/// Other users' bookings and the backend's no-show releases should show
+	/// up without a relaunch.
+	private func startAutoRefresh() {
+		guard refreshTask == nil else { return }
+		refreshTask = Task { [weak self] in
+			while !Task.isCancelled {
+				try? await Task.sleep(for: .seconds(30))
+				guard let self else { return }
+				if UIApplication.shared.applicationState == .active {
+					try? await self.refresh()
 				}
 			}
 		}
-		
-		self.reservations = generatedReservations
 	}
 }

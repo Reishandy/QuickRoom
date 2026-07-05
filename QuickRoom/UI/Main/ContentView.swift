@@ -145,4 +145,5 @@ struct ContentView: View {
 		.environment(LocationPermissionService())
 		.environment(NotificationPermissionService())
 		.environment(ReservationService())
+		.environment(AuthService.shared)
 }
