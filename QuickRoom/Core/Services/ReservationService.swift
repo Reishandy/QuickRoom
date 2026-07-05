@@ -50,15 +50,7 @@ class ReservationService {
 	}
 	
 	func status(for room: Room, at time: Date) -> RoomStatus {
-		let calendar = Calendar.current
-		let weekday = calendar.component(.weekday, from: time)
-		let hour = calendar.component(.hour, from: time)
-		let minute = calendar.component(.minute, from: time)
-		
-		let isWeekend = (weekday == 1 || weekday == 7)
-		let isOffHour = hour < 7 || hour > 19 || (hour == 19 && minute > 0)
-		
-		if isWeekend || isOffHour {
+		guard Calendar.current.isWithinWorkingHours(time) else {
 			return .disabled
 		}
 		

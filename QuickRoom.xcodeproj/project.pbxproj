@@ -6,8 +6,15 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8B35F0022FF9F48200C0F97F /* Debug.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8B35F0012FF9F48200C0F97F /* Debug.xcconfig */; };
+		8B35F0042FF9F48700C0F97F /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8B35F0032FF9F48700C0F97F /* Release.xcconfig */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		8B35E7CF2FF5F41400C0F97F /* QuickRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuickRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8B35F0012FF9F48200C0F97F /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		8B35F0032FF9F48700C0F97F /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -47,6 +54,8 @@
 			children = (
 				8B35E7D12FF5F41400C0F97F /* QuickRoom */,
 				8B35E7D02FF5F41400C0F97F /* Products */,
+				8B35F0012FF9F48200C0F97F /* Debug.xcconfig */,
+				8B35F0032FF9F48700C0F97F /* Release.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
@@ -122,6 +131,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8B35F0022FF9F48200C0F97F /* Debug.xcconfig in Resources */,
+				8B35F0042FF9F48700C0F97F /* Release.xcconfig in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -261,6 +272,7 @@
 		};
 		8B35E7DB2FF5F41600C0F97F /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8B35F0012FF9F48200C0F97F /* Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -303,6 +315,7 @@
 		};
 		8B35E7DC2FF5F41600C0F97F /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 8B35F0032FF9F48700C0F97F /* Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

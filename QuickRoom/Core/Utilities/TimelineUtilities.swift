@@ -8,33 +8,36 @@
 import Foundation
 
 struct TimelineUtilities {
-	static func generateTicks(anchorDate: Date, workingHourStart: Int, workingHourEnd: Int) -> [TimelineTick] {
+	static func generateTicks(anchorDate: Date) -> [TimelineTick] {
 		var generatedTicks: [TimelineTick] = []
-		let startDate = Calendar.current.date(byAdding: .day, value: -14, to: anchorDate) ?? anchorDate
-		let endDate = Calendar.current.date(byAdding: .day, value: 30, to: anchorDate) ?? anchorDate
+		
+		let startDate = Calendar.current.date(byAdding: .day, value: -AppConfig.Timeline.lookbehindDays, to: anchorDate) ?? anchorDate
+		let endDate = Calendar.current.date(byAdding: .day, value: AppConfig.Timeline.lookaheadDays, to: anchorDate) ?? anchorDate
 		
 		var currentDate = startDate
 		var id = 0
 		let calendar = Calendar.current
+		
+		let workingHourStart = AppConfig.WorkingHours.start
+		let workingHourEnd = AppConfig.WorkingHours.end
 		
 		while currentDate <= endDate {
 			let weekday = calendar.component(.weekday, from: currentDate)
 			let hour = calendar.component(.hour, from: currentDate)
 			let minute = calendar.component(.minute, from: currentDate)
 			
-			// Constrain exact hour bounds strictly to weekdays to prevent fragmenting the weekend block
-			let isWeekday = (weekday >= 2 && weekday <= 6)
+			let isWeekday = calendar.isWeekday(currentDate)
 			let isExactWorkStart = isWeekday && (hour == workingHourStart && minute == 0)
 			let isExactWorkEnd = isWeekday && (hour == workingHourEnd && minute == 0)
 			
-			// Weekend definitions
 			let isFridayOff = (weekday == 6 && (hour > workingHourEnd || (hour == workingHourEnd && minute > 0)))
 			let isSaturday = (weekday == 7)
 			let isSunday = (weekday == 1)
 			let isMondayOff = (weekday == 2 && hour < workingHourStart)
 			
 			let isWeekendOffTime = isFridayOff || isSaturday || isSunday || isMondayOff
-			let isWeekdayOffTime = !isWeekendOffTime && (hour < workingHourStart || hour > workingHourEnd || (hour == workingHourEnd && minute > 0)) && !isExactWorkStart && !isExactWorkEnd
+			
+			let isWeekdayOffTime = !isWeekendOffTime && !calendar.isWithinWorkingHours(currentDate) && !isExactWorkStart && !isExactWorkEnd
 			
 			let tickType: TickType
 			var incrementMinutes: Int
@@ -42,7 +45,6 @@ struct TimelineUtilities {
 			if isExactWorkStart || isExactWorkEnd || (!isWeekdayOffTime && !isWeekendOffTime && minute == 0) {
 				tickType = .normalHour
 				if isExactWorkEnd {
-					// At the exact end of work, determine next tick leap based on whether weekend starts
 					incrementMinutes = (weekday == 6) ? 180 : 60
 				} else {
 					incrementMinutes = 10
@@ -63,11 +65,9 @@ struct TimelineUtilities {
 			
 			var nextDate = calendar.date(byAdding: .minute, value: incrementMinutes, to: currentDate)!
 			
-			// Clamp to exact work start if a 3-hour weekend jump unintentionally steps over it
 			if let targetStart = calendar.date(bySettingHour: workingHourStart, minute: 0, second: 0, of: nextDate) {
 				if currentDate < targetStart && nextDate > targetStart {
-					let targetWeekday = calendar.component(.weekday, from: targetStart)
-					if targetWeekday >= 2 && targetWeekday <= 6 {
+					if calendar.isWeekday(targetStart) {
 						nextDate = targetStart
 					}
 				}
@@ -76,7 +76,6 @@ struct TimelineUtilities {
 			currentDate = nextDate
 		}
 		
-		// Post-process to group continuous blocks and assign exactly ONE label to the middle tick
 		var i = 0
 		while i < generatedTicks.count {
 			let type = generatedTicks[i].type

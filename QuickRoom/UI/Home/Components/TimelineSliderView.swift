@@ -19,31 +19,25 @@ struct TimelineSliderView: View {
 	@State private var boundaryHitTrigger: Int = 0
 	@State private var nowIndex: Int = 0
 	
-	var workingHourStart: Int
-	var workingHourEnd: Int
-	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
-	private let tickWidth: CGFloat = 8
 	
-	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, workingHourStart: Int = 7, workingHourEnd: Int = 19) {
+	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>) {
 		self._selectedDate = selectedDate
 		self._selectedIndex = selectedIndex
-		self.workingHourStart = workingHourStart
-		self.workingHourEnd = workingHourEnd
 		
 		let anchor = Calendar.current.startOfDay(for: .now)
-		self._ticks = State(initialValue: TimelineUtilities.generateTicks(anchorDate: anchor, workingHourStart: workingHourStart, workingHourEnd: workingHourEnd))
+		self._ticks = State(initialValue: TimelineUtilities.generateTicks(anchorDate: anchor))
 	}
 	
 	var body: some View {
 		GeometryReader { geometry in
-			let centerPadding = (geometry.size.width / 2) - (tickWidth / 2)
+			let centerPadding = (geometry.size.width / 2) - (AppConfig.Timeline.tickWidth / 2)
 			
 			ZStack(alignment: .top) {
 				ScrollView(.horizontal, showsIndicators: false) {
 					LazyHStack(alignment: .top, spacing: 0) {
 						ForEach(ticks) { tick in
-							TimelineTickView(tick: tick, nowIndex: nowIndex, tickWidth: tickWidth)
+							TimelineTickView(tick: tick, nowIndex: nowIndex, tickWidth: AppConfig.Timeline.tickWidth)
 								.equatable()
 								.id(tick.id)
 						}
