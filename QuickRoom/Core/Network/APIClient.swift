@@ -24,8 +24,7 @@ enum APIError: LocalizedError {
 }
 
 final class APIClient {
-	// Task 4 swaps the token provider to read the Keychain session.
-	static var shared = APIClient(baseURL: AppConfig.API.baseURL, tokenProvider: { nil })
+	static var shared = APIClient(baseURL: AppConfig.API.baseURL, tokenProvider: { KeychainStore.sessionToken })
 
 	private let baseURL: URL
 	private let session: URLSession
