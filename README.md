@@ -42,11 +42,29 @@ Quick Room is a smart reservation application designed to optimize room usage by
 
 ## Technical Architecture
 
-> **TODO:** Document the app's structural and technical architecture here (e.g., Pattern, CoreLocation, backend sync, etc.).
+The application follows a modular, feature-based architecture heavily inspired by Domain-Driven Design (DDD) and Service-Oriented principles to ensure a clean separation of concerns[cite: 1].
+
+*   **UI Layer (SwiftUI)**: Organized by features (e.g., `Home`, `Main`, `Onboarding`, `Reserve`) rather than structural types. It utilizes specialized components (like `RelativePolygonShape` and `TimelineSliderView`) for a highly custom smart-room interface[cite: 1].
+*   **Domain Layer**: Encapsulates the core business logic and models, safely separating strongly-typed entities such as `Room`, `Reservation`, and `TimelineTick` from network or UI implementations[cite: 1].
+*   **Core Services**: Acts as the central nervous system of the app. Specific managers handle distinct responsibilities:
+    *   `BeaconMonitoringService`: Interfaces with device hardware to continuously scan for iBeacons and determine room proximity[cite: 1].
+    *   `AuthService` & `KeychainStore`: Manages user sessions and securely stores sensitive credentials natively on the device[cite: 1].
+    *   `ReservationService`: Coordinates room booking rules, grace periods, and auto-release logic[cite: 1].
+*   **Network Layer**: A dedicated API Client handles backend synchronization using Data Transfer Objects (DTOs) for robust JSON parsing. It also includes specialized modules like `PresenceReporter` to ping the backend when a user enters a room and `PushRegistrar` for remote notifications[cite: 1].
+*   **Permissions Management**: Abstracted into standalone services (`LocationPermissionService`, `NotificationPermissionService`) to ensure smooth user onboarding and lifecycle handling[cite: 1].
 
 ## Tech Stack
 
-> **TODO:** List out the complete tech stack, libraries, and frameworks used.
+**Core Application**
+*   **Language:** Swift 6.0
+*   **UI Framework:** SwiftUI (iOS 17.0+)
+*   **Architecture Pattern:** Domain-Driven / Service-Oriented Architecture
+
+**Apple Frameworks & Libraries**
+*   **CoreLocation:** Used extensively for iBeacon ranging and background presence detection
+*   **UserNotifications:** Triggers time expirations, no-show alerts, and meeting reminders
+*   **Netowrk:** Powers the custom API client for robust and secure RESTful network communication and backend synchronization
+*   **CoreHaptics:** Provides tactile feedback during key interactions, such as confirming a reservation or receiving an alert, enhancing the smart room experience
 
 ## License
 
