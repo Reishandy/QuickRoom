@@ -37,4 +37,36 @@ final class AuthServiceTests: XCTestCase {
 		XCTAssertFalse(service.isSignedIn)
 		XCTAssertNil(service.currentUser)
 	}
+
+	@MainActor
+	func testHandleUnauthorizedClearsSessionLocally() {
+		KeychainStore.sessionToken = "tok-dead"
+		KeychainStore.currentUserJSON = #"{"userId":"u-1","email":"a@b.c","name":"Asadullokh"}"#
+		let service = AuthService(client: .shared)
+		XCTAssertTrue(service.isSignedIn)
+
+		service.handleUnauthorized()
+
+		XCTAssertFalse(service.isSignedIn)
+		XCTAssertNil(KeychainStore.sessionToken)
+		XCTAssertNil(KeychainStore.currentUserJSON)
+	}
+
+	@MainActor
+	func testInitWiresUnauthorizedHook() {
+		KeychainStore.sessionToken = "tok-dead"
+		KeychainStore.currentUserJSON = #"{"userId":"u-1","email":"a@b.c","name":"Asadullokh"}"#
+		let client = APIClient(baseURL: URL(string: "http://localhost:1")!, tokenProvider: { KeychainStore.sessionToken })
+		let service = AuthService(client: client)
+		XCTAssertTrue(service.isSignedIn)
+
+		client.onUnauthorized?()
+
+		let cleared = expectation(description: "session cleared")
+		Task { @MainActor in
+			while service.isSignedIn { await Task.yield() }
+			cleared.fulfill()
+		}
+		wait(for: [cleared], timeout: 2)
+	}
 }
