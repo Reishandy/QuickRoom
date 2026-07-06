@@ -12,6 +12,7 @@ struct ContentView: View {
 	@Environment(LocationPermissionService.self) private var locationPermissionService
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
 	@Environment(ReservationService.self) private var reservationService
+	@Environment(AuthService.self) private var authService
 	
 	let isPreview: Bool
 	
@@ -31,7 +32,7 @@ struct ContentView: View {
 	// TODO: Loading state for UI
 	var body: some View {
 		Group {
-			if preferenceService.hasSeenOnboarding {
+			if preferenceService.hasSeenOnboarding && authService.isSignedIn {
 				baseScreen
 			} else {
 				OnboardingView()
@@ -56,6 +57,7 @@ struct ContentView: View {
 				.presentationDragIndicator(.visible)
 		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
+		.animation(.easeInOut, value: authService.isSignedIn)
 		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
