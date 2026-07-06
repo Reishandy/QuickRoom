@@ -44,7 +44,7 @@ struct ContentView: View {
 				.presentationDetents([.large])
 		}
 		.sheet(isPresented: Binding(
-			get: { isPreview ? true : !shouldShowPermissionSheet },
+			get: { isPreview ? true : (!shouldShowPermissionSheet && preferenceService.hasSeenOnboarding && authService.isSignedIn) },
 			set: { _ in }
 		)) {
 			sheetScreen
