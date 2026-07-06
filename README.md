@@ -3,7 +3,8 @@
 
   # Quick Room
 
-  // TODO: Short description
+  > **TODO:** Add a short, catchy description here. (First Iteration)
+  Smart room reservation app utilizing iBeacon technology for presence detection and automated room management.
 
   <!-- Badges -->
   <p>
@@ -16,7 +17,9 @@
 
 ## Overview
 
-// TODO: OVerview
+> **TODO:** Expand this overview in future iterations.
+
+Quick Room is a smart reservation application designed to optimize room usage by utilizing iBeacon technology to detect physical presence in a room. It ensures meeting spaces are used efficiently by monitoring occupancy, sending contextual notifications to users, and automatically managing room availability based on actual attendance.
 
 ### Previews
 
@@ -29,20 +32,26 @@
 
 ## Key Features
 
-// TODO
+> **TODO:** Refine and detail these features as development progresses.
+
+* **Presence Detection**: Uses iBeacon to detect if the person who booked the room is actually inside.
+* **Time Expiration Alerts**: Notifies the person currently inside the room when their reserved time is running out.
+* **Meeting Reminders**: Alerts users to let them know if they have upcoming meetings.
+* **No-Show Reminders**: Notifies users if they have booked a meeting room but have not yet entered it.
+* **Auto-Release**: Automatically frees up the room after a few minutes (grace period) if the user who booked it fails to show up.
 
 ## Technical Architecture
 
-// TODO
+> **TODO:** Document the app's structural and technical architecture here (e.g., Pattern, CoreLocation, backend sync, etc.).
 
 ## Tech Stack
 
-// TODO
+> **TODO:** List out the complete tech stack, libraries, and frameworks used.
 
 ## License
 
-// TODO
+> **TODO:** Add license information here.
 
 ## Authors
 
-// TODO
+> **TODO:** Add author and contact details here.
