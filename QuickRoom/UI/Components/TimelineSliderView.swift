@@ -27,6 +27,9 @@ struct TimelineSliderView: View {
 	@State private var minAllowedIndex: Int = 0
 	@State private var boundaryHitTrigger: Int = 0
 	@State private var nowIndex: Int = 0
+	/// Set while a programmatic jump (Now / date picker) is in flight so the
+	/// still-decelerating scroll can't stomp the selection mid-jump.
+	@State private var programmaticTarget: Int? = nil
 	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 	
@@ -72,6 +75,12 @@ struct TimelineSliderView: View {
 					)
 				}
 				.onChange(of: scrollPosition) { _, newPosition in
+					if let target = programmaticTarget {
+						if newPosition.viewID as? Int == target {
+							programmaticTarget = nil
+						}
+						return
+					}
 					if let newIndex = newPosition.viewID as? Int, selectedIndex != newIndex {
 						selectedIndex = newIndex
 					}
@@ -127,9 +136,7 @@ struct TimelineSliderView: View {
 			isAtNow = newIndex == nowIndex
 		}
 		.onChange(of: goToNowPulse) { _, _ in
-			withAnimation(.bouncy) {
-				selectedIndex = nowIndex
-			}
+			jump(to: nowIndex)
 		}
 		.onChange(of: jumpDate) { _, target in
 			guard let target else { return }
@@ -139,14 +146,28 @@ struct TimelineSliderView: View {
 			let idx = ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) && $0.date >= wanted })
 				?? ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) })
 			guard let found = idx else { return }
-			withAnimation(.bouncy) {
-				selectedIndex = max(found, minAllowedIndex)
-			}
+			jump(to: max(found, minAllowedIndex))
 		}
 		.sensoryFeedback(.selection, trigger: selectedIndex)
 		.sensoryFeedback(.error, trigger: boundaryHitTrigger)
 	}
 	
+	private func jump(to index: Int) {
+		programmaticTarget = index
+		withAnimation(.bouncy) {
+			selectedIndex = index
+		}
+		// If leftover momentum swallowed the animated jump, settle it hard.
+		Task {
+			try? await Task.sleep(for: .milliseconds(700))
+			if programmaticTarget == index {
+				programmaticTarget = nil
+				selectedIndex = index
+				scrollPosition.scrollTo(id: index)
+			}
+		}
+	}
+
 	private func updateCurrentTimeConstraints() {
 		let now = Date.now
 		
