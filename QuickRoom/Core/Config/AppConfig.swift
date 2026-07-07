@@ -36,9 +36,9 @@ enum AppConfig {
 	
 	// TODO: Make sure this match what the api request for the lookahead
 	enum Timeline {
-		// Coarser than the 15-min booking grid on purpose (mentor feedback:
-		// a tick per booking slot reads like a ruler).
-		static let tickStepMinutes = 30
+		// One tick per bookable slot, day-separated so it doesn't read
+		// like a ruler.
+		static let tickStepMinutes = 15
 		static let tickWidth: CGFloat = 14
 		static let lookbehindDays = 2
 		static let lookaheadDays = 14

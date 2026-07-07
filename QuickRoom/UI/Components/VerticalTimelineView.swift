@@ -83,7 +83,8 @@ struct VerticalTimelineView: View {
 						let startY = TimelineUtilities.yPosition(for: reservation.startTime, baseDate: selectedDate, hourHeight: hourHeight)
 						let endY = TimelineUtilities.yPosition(for: reservation.endTime, baseDate: selectedDate, hourHeight: hourHeight)
 						
-						let blockTitle = reservation.isMyReservation ? "My Reservation" : "Reservation"
+						let blockTitle = !reservation.title.isEmpty ? reservation.title
+							: reservation.isMyReservation ? "My Reservation" : "Reservation"
 						
 						ReservationBlockView(
 							title: blockTitle,
