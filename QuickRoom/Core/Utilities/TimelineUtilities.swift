@@ -120,11 +120,13 @@ struct TimelineUtilities {
 	}
 	
 	static func workingHoursStart(for date: Date) -> Date {
-		Calendar.current.date(bySettingHour: AppConfig.WorkingHours.start, minute: 0, second: 0, of: date) ?? date
+		let midnight = Calendar.current.startOfDay(for: date)
+		return Calendar.current.date(bySettingHour: AppConfig.WorkingHours.start, minute: 0, second: 0, of: midnight) ?? date
 	}
 	
 	static func workingHoursEnd(for date: Date) -> Date {
-		Calendar.current.date(bySettingHour: AppConfig.WorkingHours.end, minute: 0, second: 0, of: date) ?? date
+		let midnight = Calendar.current.startOfDay(for: date)
+		return Calendar.current.date(bySettingHour: AppConfig.WorkingHours.end, minute: 0, second: 0, of: midnight) ?? date
 	}
 	
 	/// Returns 00:00 for the given date
