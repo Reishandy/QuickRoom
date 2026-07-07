@@ -17,6 +17,8 @@ struct ReserveSheetView: View {
 	let onDismissClick: () -> Void
 	
 	@State private var title: String = ""
+	@State private var showNameAlert = false
+	@State private var showRenameAlert = false
 	@State private var startTime: Date = .now
 	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
 	@State private var isProcessing = false
@@ -39,25 +41,9 @@ struct ReserveSheetView: View {
 		dailyReservations.contains { $0.isMyReservation }
 	}
 	
-	private var renamePending: Bool {
-		guard let mine = myReservation else { return false }
-		return title != mine.title
-	}
-
 	var body: some View {
 		NavigationStack {
 			VStack {
-				// Calendar-style title row: an inset grouped field above the
-				// date controls, name-first like the native event sheet.
-				TextField("Booking name", text: $title)
-					.submitLabel(.done)
-					.onSubmit { saveRenameIfNeeded() }
-					.padding(.horizontal, 16)
-					.padding(.vertical, 11)
-					.background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
-					.padding(.horizontal, 16)
-					.padding(.top, 8)
-
 				HorizontalDatePickerView(selectedDate: $selectedDate)
 					.frame(maxHeight: 80)
 				
@@ -80,11 +66,7 @@ struct ReserveSheetView: View {
 				}
 				
 				ToolbarItem(placement: .topBarTrailing) {
-					if renamePending, myReservation != nil {
-						Button("Save") { saveRenameIfNeeded() }
-							.buttonStyle(.borderedProminent)
-							.disabled(isProcessing)
-					} else if myReservation != nil {
+					if myReservation != nil {
 						Button {
 							showDeleteConfirmation = true
 						} label: {
@@ -116,15 +98,8 @@ struct ReserveSheetView: View {
 						}
 					} else {
 						Button {
-							Task {
-								isProcessing = true
-								defer { isProcessing = false }
-								do {
-									try await reservationService.reserve(roomId: roomId, title: title.isEmpty ? nil : title, startTime: startTime, endTime: endTime)
-								} catch {
-									errorMessage = error.localizedDescription
-								}
-							}
+							title = ""
+							showNameAlert = true
 						} label: {
 							if isProcessing {
 								ProgressView()
@@ -137,6 +112,16 @@ struct ReserveSheetView: View {
 					}
 				}
 				
+				if hasExistingReservation {
+					ToolbarItemGroup(placement: .bottomBar) {
+						Button("Rename", systemImage: "pencil") {
+							title = myReservation?.title ?? ""
+							showRenameAlert = true
+						}
+						.disabled(isProcessing)
+					}
+				}
+
 				if !hasExistingReservation {
 					ToolbarItemGroup(placement: .bottomBar) {
 						Button("Starts: \(startTime.toPickerString())") {
@@ -168,6 +153,18 @@ struct ReserveSheetView: View {
 						}
 					}
 				}
+			}
+			.alert("Name your booking", isPresented: $showNameAlert) {
+				TextField("Booking name (optional)", text: $title)
+				Button("Book") { book() }
+				Button("Cancel", role: .cancel) {}
+			} message: {
+				Text("Shown on the room's timeline.")
+			}
+			.alert("Rename booking", isPresented: $showRenameAlert) {
+				TextField("Booking name", text: $title)
+				Button("Save") { saveRename() }
+				Button("Cancel", role: .cancel) {}
 			}
 			.alert("Couldn't complete that", isPresented: Binding(
 				get: { errorMessage != nil },
@@ -203,14 +200,23 @@ struct ReserveSheetView: View {
 			}
 			.task {
 				try? await reservationService.fetchReservationsOnLoad()
-				if let mine = myReservation {
-					title = mine.title
-				}
 			}
 		}
 	}
 
-	private func saveRenameIfNeeded() {
+	private func book() {
+		Task {
+			isProcessing = true
+			defer { isProcessing = false }
+			do {
+				try await reservationService.reserve(roomId: roomId, title: title.isEmpty ? nil : title, startTime: startTime, endTime: endTime)
+			} catch {
+				errorMessage = error.localizedDescription
+			}
+		}
+	}
+
+	private func saveRename() {
 		guard let mine = myReservation, title != mine.title else { return }
 		Task {
 			isProcessing = true
