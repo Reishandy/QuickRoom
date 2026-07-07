@@ -13,6 +13,7 @@ import UIKit
 class ReservationService {
 	var rooms: [Room] = []
 	var reservations: [Reservation] = []
+	var myReservations: [Reservation] = []
 	var isLoading: Bool = false
 
 	private let client: APIClient
@@ -70,6 +71,26 @@ class ReservationService {
 
 		rooms = Self.mapRooms(serverRooms)
 		reservations = Self.mapReservations(serverReservations, myUserId: auth.currentUser?.userId)
+
+		// Separate fetch: the user's own history (all statuses, so released
+		// and cancelled bookings stay visible in My bookings). Tolerated on
+		// failure so a hiccup here never blanks the rooms list.
+		if auth.isSignedIn, let mine: ReservationsResponse = try? await client.get("/reservations/mine") {
+			myReservations = Self.mapMine(mine.reservations)
+		}
+	}
+
+	static func mapMine(_ dtos: [ReservationDTO]) -> [Reservation] {
+		dtos.map { dto in
+			Reservation(
+				id: dto.reservationId,
+				roomId: dto.zoomWorkspaceId,
+				isMyReservation: true,
+				status: dto.status,
+				startTime: dto.startTime,
+				endTime: dto.endTime
+			)
+		}
 	}
 
 	static func mapRooms(_ dtos: [RoomDTO]) -> [Room] {
@@ -84,6 +105,7 @@ class ReservationService {
 				id: dto.reservationId,
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: myUserId != nil && dto.bookedByUserId == myUserId,
+				status: dto.status,
 				startTime: dto.startTime,
 				endTime: dto.endTime
 			)

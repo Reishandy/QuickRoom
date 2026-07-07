@@ -47,7 +47,7 @@ struct TimelineUtilities {
 				if isExactWorkEnd {
 					incrementMinutes = (weekday == 6) ? 180 : 60
 				} else {
-					incrementMinutes = 10
+					incrementMinutes = AppConfig.Reservation.timeStepMinutes
 				}
 			} else if isWeekendOffTime {
 				tickType = .weekend
@@ -57,7 +57,7 @@ struct TimelineUtilities {
 				incrementMinutes = 60
 			} else {
 				tickType = .normalMinute
-				incrementMinutes = 10
+				incrementMinutes = AppConfig.Reservation.timeStepMinutes
 			}
 			
 			generatedTicks.append(TimelineTick(id: id, date: currentDate, hour: hour, type: tickType))

@@ -29,10 +29,17 @@ struct HomeView: View {
 		}
 	}
 
+	// Active and upcoming bookings first (soonest on top), then history
+	// (released, cancelled, no-show, past) newest first.
 	private var myBookings: [Reservation] {
-		reservationService.reservations
-			.filter(\.isMyReservation)
+		let now = Date.now
+		let active = reservationService.myReservations
+			.filter { $0.status == "booked" && $0.endTime >= now }
 			.sorted { $0.startTime < $1.startTime }
+		let history = reservationService.myReservations
+			.filter { !($0.status == "booked" && $0.endTime >= now) }
+			.sorted { $0.startTime > $1.startTime }
+		return active + history
 	}
 
 	var body: some View {
@@ -47,8 +54,10 @@ struct HomeView: View {
 
 					if availableRooms.isEmpty {
 						emptyCard("There are no available rooms")
+							.transition(.opacity)
 					} else {
 						roomList
+							.transition(.opacity)
 					}
 				} else {
 					if myBookings.isEmpty {
@@ -65,6 +74,8 @@ struct HomeView: View {
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.background(Color(uiColor: .systemGroupedBackground))
 		.animation(.easeInOut(duration: 0.2), value: tab)
+		.animation(.easeInOut(duration: 0.25), value: availableRooms)
+		.animation(.easeInOut(duration: 0.25), value: myBookings)
 	}
 
 	@ViewBuilder
@@ -145,6 +156,7 @@ struct HomeView: View {
 									.foregroundStyle(.secondary)
 							}
 							Spacer()
+							statusBadge(booking.status)
 							Image(systemName: "chevron.right")
 								.font(.footnote.weight(.semibold))
 								.foregroundStyle(.tertiary)
@@ -165,6 +177,22 @@ struct HomeView: View {
 			.padding(.bottom, 90)
 		}
 		.scrollIndicators(.hidden)
+	}
+
+	private func statusBadge(_ status: String) -> some View {
+		let (label, color): (String, Color) = switch status {
+		case "booked": ("Booked", .blue)
+		case "released": ("Released", .orange)
+		case "no_show": ("No-show", .red)
+		case "cancelled": ("Cancelled", .secondary)
+		default: (status.capitalized, .secondary)
+		}
+		return Text(label)
+			.font(.caption2.weight(.semibold))
+			.foregroundStyle(color)
+			.padding(.horizontal, 8)
+			.padding(.vertical, 4)
+			.background(color.opacity(0.12), in: Capsule())
 	}
 
 	private func rowIcon(_ systemName: String) -> some View {
