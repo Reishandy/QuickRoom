@@ -27,6 +27,14 @@ final class AuthService {
 		client.onUnauthorized = { [weak self] in
 			Task { @MainActor in self?.handleUnauthorized() }
 		}
+		// Fires while the app is running if the user revokes the app in
+		// Settings > Apple ID > Sign in with Apple.
+		NotificationCenter.default.addObserver(
+			forName: ASAuthorizationAppleIDProvider.credentialRevokedNotification,
+			object: nil, queue: nil
+		) { [weak self] _ in
+			Task { @MainActor in self?.handleUnauthorized() }
+		}
 	}
 
 	func configure(_ request: ASAuthorizationAppleIDRequest) {
@@ -50,6 +58,7 @@ final class AuthService {
 
 		let response: AuthResponse = try await client.post("/auth/apple", body: AppleAuthRequest(identityToken: identityToken, name: name))
 		KeychainStore.sessionToken = response.sessionToken
+		KeychainStore.appleUserID = credential.user
 		if let data = try? JSONEncoder().encode(response.user) {
 			KeychainStore.currentUserJSON = String(data: data, encoding: .utf8)
 		}
@@ -75,5 +84,17 @@ final class AuthService {
 		KeychainStore.sessionToken = nil
 		KeychainStore.currentUserJSON = nil
 		currentUser = nil
+	}
+
+	/// Sign in with Apple can be revoked outside the app (Settings > Apple ID >
+	/// Sign in with Apple > Stop Using). The backend session stays valid, so
+	/// without this check the app would look signed in forever with a dead
+	/// Apple credential. Called on launch and on every foreground.
+	func validateAppleCredential() async {
+		guard isSignedIn, let appleID = KeychainStore.appleUserID else { return }
+		guard let state = try? await ASAuthorizationAppleIDProvider().credentialState(forUserID: appleID) else { return }
+		if state == .revoked || state == .notFound {
+			await handleUnauthorized()
+		}
 	}
 }

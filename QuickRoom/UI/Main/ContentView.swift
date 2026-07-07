@@ -61,6 +61,7 @@ struct ContentView: View {
 		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
+				await authService.validateAppleCredential()
 				await notificationPermissionService.checkStatus()
 				isPermissionSheetShown = shouldShowPermissionSheet
 			}
@@ -83,6 +84,7 @@ struct ContentView: View {
 			}
 		}
 		.task {
+			await authService.validateAppleCredential()
 			try? await reservationService.fetchReservationsOnLoad()
 		}
 	}
