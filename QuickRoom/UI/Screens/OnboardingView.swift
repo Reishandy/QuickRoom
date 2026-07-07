@@ -14,15 +14,20 @@ struct OnboardingView: View {
 
 	@State private var signInErrorMessage: String?
 
-	// TODO: Onboarding view UI
 	var body: some View {
-		VStack(spacing: 16) {
-			Text("This is onboarding")
+		VStack(alignment: .leading) {
+			VStack(alignment: .leading, spacing: 14) {
+				Text("Welcome to")
+				
+				Text("Apple Developer Academy @ BINUS, Bali")
+					.font(.largeTitle)
+					.bold()
+			}
+			
+			Spacer()
 
 			if authService.isSignedIn {
-				Text("Signed in as \(authService.currentUser?.name ?? "")")
-					.font(.subheadline)
-					.foregroundStyle(.secondary)
+				
 			} else {
 				SignInWithAppleButton(.signIn) { request in
 					authService.configure(request)
@@ -37,15 +42,20 @@ struct OnboardingView: View {
 					}
 				}
 				.signInWithAppleButtonStyle(.black)
-				.frame(height: 50)
-				.padding(.horizontal, 40)
+				.frame(height: 45)
+				.clipShape(RoundedRectangle(cornerRadius: 24))
+				
+				Button {
+					preferenceService.hasSeenOnboarding = true
+				} label: {
+					Text("Continue as \(authService.currentUser?.name ?? "User")")
+						.padding(.vertical, 6)
+						.frame(maxWidth: .infinity)
+				}
+				.buttonStyle(.borderedProminent)
 			}
-
-			Button(authService.isSignedIn ? "Continue" : "Skip for now") {
-				preferenceService.hasSeenOnboarding = true
-			}
-			.buttonStyle(.borderedProminent)
 		}
+		.padding(20)
 		.alert("Sign-in failed", isPresented: Binding(
 			get: { signInErrorMessage != nil },
 			set: { if !$0 { signInErrorMessage = nil } }

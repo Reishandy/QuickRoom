@@ -77,7 +77,7 @@ struct PermissionSheetView: View {
 				}
 			} label: {
 				Text(shouldShowSettingsRedirect ? "Go to settings" : "Grant permissions")
-					.padding(.vertical, 4)
+					.padding(.vertical, 6)
 					.frame(maxWidth: .infinity)
 			}
 			.buttonStyle(.borderedProminent)
