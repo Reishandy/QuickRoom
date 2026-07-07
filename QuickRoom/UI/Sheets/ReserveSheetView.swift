@@ -15,10 +15,8 @@ struct ReserveSheetView: View {
 	
 	let roomId: String
 	let onDismissClick: () -> Void
+	let onBooked: () -> Void
 	
-	@State private var title: String = ""
-	@State private var showNameAlert = false
-	@State private var showRenameAlert = false
 	@State private var startTime: Date = .now
 	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
 	@State private var isProcessing = false
@@ -98,8 +96,7 @@ struct ReserveSheetView: View {
 						}
 					} else {
 						Button {
-							title = ""
-							showNameAlert = true
+							book()
 						} label: {
 							if isProcessing {
 								ProgressView()
@@ -112,16 +109,6 @@ struct ReserveSheetView: View {
 					}
 				}
 				
-				if hasExistingReservation {
-					ToolbarItemGroup(placement: .bottomBar) {
-						Button("Rename", systemImage: "pencil") {
-							title = myReservation?.title ?? ""
-							showRenameAlert = true
-						}
-						.disabled(isProcessing)
-					}
-				}
-
 				if !hasExistingReservation {
 					ToolbarItemGroup(placement: .bottomBar) {
 						Button("Starts: \(startTime.toPickerString())") {
@@ -153,18 +140,6 @@ struct ReserveSheetView: View {
 						}
 					}
 				}
-			}
-			.alert("Name your booking", isPresented: $showNameAlert) {
-				TextField("Booking name (optional)", text: $title)
-				Button("Book") { book() }
-				Button("Cancel", role: .cancel) {}
-			} message: {
-				Text("Shown on the room's timeline.")
-			}
-			.alert("Rename booking", isPresented: $showRenameAlert) {
-				TextField("Booking name", text: $title)
-				Button("Save") { saveRename() }
-				Button("Cancel", role: .cancel) {}
 			}
 			.alert("Couldn't complete that", isPresented: Binding(
 				get: { errorMessage != nil },
@@ -209,20 +184,8 @@ struct ReserveSheetView: View {
 			isProcessing = true
 			defer { isProcessing = false }
 			do {
-				try await reservationService.reserve(roomId: roomId, title: title.isEmpty ? nil : title, startTime: startTime, endTime: endTime)
-			} catch {
-				errorMessage = error.localizedDescription
-			}
-		}
-	}
-
-	private func saveRename() {
-		guard let mine = myReservation, title != mine.title else { return }
-		Task {
-			isProcessing = true
-			defer { isProcessing = false }
-			do {
-				try await reservationService.renameReservation(reservationId: mine.id, title: title)
+				try await reservationService.reserve(roomId: roomId, title: nil, startTime: startTime, endTime: endTime)
+				onBooked()
 			} catch {
 				errorMessage = error.localizedDescription
 			}
@@ -234,7 +197,8 @@ struct ReserveSheetView: View {
 	ReserveSheetView(
 		selectedDate: .constant(.now),
 		roomId: "ws-agung",
-		onDismissClick: {}
+		onDismissClick: {},
+		onBooked: {}
 	)
 	.environment(ReservationService())
 	.environment(AuthService.shared)

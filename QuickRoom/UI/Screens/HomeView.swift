@@ -7,11 +7,16 @@
 
 import SwiftUI
 
+enum HomeTab: Hashable {
+	case rooms, bookings
+}
+
 struct HomeView: View {
 	@Environment(ReservationService.self) private var reservationService
 
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
+	@Binding var tab: HomeTab
 	let onRoomClick: (String) -> Void
 
 	@State private var isAtNow = true
@@ -49,11 +54,11 @@ struct HomeView: View {
 	}
 
 	var body: some View {
-		TabView {
-			Tab("Free rooms", systemImage: "door.left.hand.open") {
+		TabView(selection: $tab) {
+			Tab("Free rooms", systemImage: "door.left.hand.open", value: .rooms) {
 				freeRoomsTab
 			}
-			Tab("My bookings", systemImage: "bookmark") {
+			Tab("My bookings", systemImage: "bookmark", value: .bookings) {
 				myBookingsTab
 			}
 		}
@@ -306,6 +311,7 @@ struct HomeView: View {
 #Preview {
 	@Previewable @State var selectedDate: Date = .now
 	@Previewable @State var selectedIndex: Int? = nil
+	@Previewable @State var tab: HomeTab = .rooms
 
 	let service = ReservationService()
 	service.rooms = [
@@ -317,6 +323,7 @@ struct HomeView: View {
 	return HomeView(
 		selectedDate: $selectedDate,
 		selectedIndex: $selectedIndex,
+		tab: $tab,
 		onRoomClick: { _ in }
 	)
 	.environment(service)
