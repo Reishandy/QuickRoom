@@ -159,10 +159,14 @@ struct VerticalTimelineView: View {
 				.padding(.top, 20)
 				.padding(.bottom, 40)
 				.onAppear {
-					// Auto-scroll to now (the window already starts near the workday)
-					let scrollTarget = isToday ? min(max(Calendar.current.component(.hour, from: Date()) - 1, displayStartHour), displayEndHour) : displayStartHour
-					proxy.scrollTo(scrollTarget, anchor: .top)
 					setupInitialTime()
+					// Focus the picked slot (or the existing booking), not "now".
+					let focus = hasExistingReservation
+						? (reservations.first(where: { $0.isMyReservation })?.startTime ?? startTime)
+						: startTime
+					let focusHour = Calendar.current.component(.hour, from: focus)
+					let scrollTarget = min(max(focusHour - 1, displayStartHour), displayEndHour)
+					proxy.scrollTo(scrollTarget, anchor: .top)
 				}
 			}
 		}
@@ -173,8 +177,10 @@ struct VerticalTimelineView: View {
 	
 	private func setupInitialTime() {
 		if hasExistingReservation { return }
-		
-		var proposedStart = TimelineUtilities.snapToTimeStep(TimelineUtilities.updateDate(startTime, toMatchDayOf: selectedDate))
+
+		let calendar = Calendar.current
+		let hasTimeOfDay = calendar.component(.hour, from: selectedDate) != 0 || calendar.component(.minute, from: selectedDate) != 0
+		var proposedStart = TimelineUtilities.snapToTimeStep(hasTimeOfDay ? selectedDate : TimelineUtilities.updateDate(startTime, toMatchDayOf: selectedDate))
 		var proposedEnd = proposedStart.addingTimeInterval(endTime.timeIntervalSince(startTime))
 		
 		if !isValid(start: proposedStart, end: proposedEnd) {
