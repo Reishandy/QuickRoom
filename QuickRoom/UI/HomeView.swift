@@ -14,6 +14,7 @@ struct HomeView: View {
 	var onInteract: () -> Void
 	let onRoomClick: (String) -> Void
 	
+	// TODO: Replace with UI redesign
 	var body: some View {
 		ScrollView(.horizontal, showsIndicators: false) {
 			Image("floorplan")

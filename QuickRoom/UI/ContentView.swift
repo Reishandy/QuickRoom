@@ -28,12 +28,11 @@ struct ContentView: View {
 	
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
-	// TODO: Consolidate working hours
 	// TODO: Loading state for UI
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding {
-				baseScreen
+				baseView
 			} else {
 				OnboardingView()
 			}
@@ -43,21 +42,7 @@ struct ContentView: View {
 				.interactiveDismissDisabled()
 				.presentationDetents([.large])
 		}
-		.sheet(isPresented: Binding(
-			get: { isPreview ? true : !shouldShowPermissionSheet },
-			set: { _ in }
-		)) {
-			sheetScreen
-				.presentationDetents(
-					[.height(90), .medium, .large],
-					selection: $currentMainSheetDetent
-				)
-				.presentationBackgroundInteraction(.enabled)
-				.interactiveDismissDisabled(true)
-				.presentationDragIndicator(.visible)
-		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
-		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
 				await notificationPermissionService.checkStatus()
@@ -87,55 +72,25 @@ struct ContentView: View {
 	}
 	
 	@ViewBuilder
-	private var baseScreen: some View {
-		ZStack {
-			ZStack(alignment: .top) {
-				HomeView(
-					selectedDate: selectedDate,
-					onInteract: { currentMainSheetDetent = .height(90) },
-					onRoomClick: { roomId in selectedRoomId = roomId }
-				)
-				
-				Text(selectedDate.toHomeString())
-					.bold()
-					.padding()
-					.background(.thinMaterial, in: Capsule())
-					.shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-					.padding(.top, 60)
-			}
-			.task {
-				if !isPreview {
-					await notificationPermissionService.checkStatus()
-					isPermissionSheetShown = shouldShowPermissionSheet
-				}
-			}
-			.opacity(selectedRoomId == nil ? 1 : 0)
-			.allowsHitTesting(selectedRoomId == nil)
+	private var baseView: some View {
+		ZStack(alignment: .top) {
+			HomeView(
+				selectedDate: selectedDate,
+				onInteract: { currentMainSheetDetent = .height(90) },
+				onRoomClick: { roomId in selectedRoomId = roomId }
+			)
 			
-			if let selectedRoomId = selectedRoomId {
-				NavigationStack {
-					ReserveView(roomId: selectedRoomId)
-						.toolbar {
-							ToolbarItem(placement: .topBarLeading) {
-								Button {
-									self.selectedRoomId = nil
-								} label: {
-									Image(systemName: "chevron.left")
-								}
-							}
-						}
-				}
-				.transition(.move(edge: .trailing))
-			}
+			Text(selectedDate.toHomeString())
+				.bold()
+				.padding()
+				.background(.thinMaterial, in: Capsule())
+				.shadow(color: .black.opacity(0.15), radius: 8, y: 4)
+				.padding(.top, 60)
 		}
-		.animation(.default, value: selectedRoomId)
-	}
-	
-	@ViewBuilder
-	private var sheetScreen: some View {
-		if let selectedRoom = selectedRoomId {
-			ReserveSheetView(roomId: selectedRoom)
-		} else {
+		.sheet(isPresented: Binding(
+			get: { isPreview ? true : !shouldShowPermissionSheet },
+			set: { _ in }
+		)) {
 			HomeSheetView(
 				currentSheetDetent: $currentMainSheetDetent,
 				selectedDate: $selectedDate,
@@ -143,6 +98,42 @@ struct ContentView: View {
 				reservations: reservationService.reservations
 			) { roomId in
 				selectedRoomId = roomId
+			}
+			.presentationDetents(
+				[.height(90), .medium, .large],
+				selection: $currentMainSheetDetent
+			)
+			.presentationBackgroundInteraction(.enabled)
+			.interactiveDismissDisabled(true)
+			.presentationDragIndicator(.visible)
+			.sheet(isPresented: Binding(
+				get: { selectedRoomId != nil },
+				set: { isPresented in
+					if !isPresented { selectedRoomId = nil }
+				}
+			)) {
+				if let selectedRoom = selectedRoomId {
+					// TODO: Move navigation stack inside
+					NavigationStack {
+						ReserveSheetView(roomId: selectedRoom)
+							.presentationDetents([.large])
+							.interactiveDismissDisabled(true)
+							.presentationDragIndicator(.hidden)
+							.toolbar {
+								ToolbarItem(placement: .topBarLeading) {
+									Button("Close") {
+										selectedRoomId = nil
+									}
+								}
+							}
+					}
+				}
+			}
+		}
+		.task {
+			if !isPreview {
+				await notificationPermissionService.checkStatus()
+				isPermissionSheetShown = shouldShowPermissionSheet
 			}
 		}
 	}

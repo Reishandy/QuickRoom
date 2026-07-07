@@ -20,6 +20,7 @@ struct ReserveSheetView: View {
 	@State private var errorMessage: String?
 	@State private var isSignInPresented = false
 
+	// TODO: Update as per FIGMA design
 	var body: some View {
 		NavigationStack {
 			Form {
