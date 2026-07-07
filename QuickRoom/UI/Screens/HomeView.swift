@@ -17,7 +17,14 @@ struct HomeView: View {
 	@State private var isAtNow = true
 	@State private var goToNowPulse = 0
 	@State private var jumpDate: Date? = nil
-	@State private var showDayStrip = false
+	@State private var showDatePicker = false
+
+	// The scrubber's reachable window: today through its lookahead.
+	private var jumpRange: ClosedRange<Date> {
+		let today = Calendar.current.startOfDay(for: .now)
+		let last = Calendar.current.date(byAdding: .day, value: AppConfig.Timeline.lookaheadDays, to: today) ?? today
+		return today...last
+	}
 
 	private var availableRooms: [Room] {
 		reservationService.rooms.filter {
@@ -58,33 +65,14 @@ struct HomeView: View {
 		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
-					VStack(spacing: 4) {
-						// Hidden by default; a pull-down on the page reveals it
-						// (search-bar style) for long jumps across days.
-						if showDayStrip {
-							HorizontalDatePickerView(selectedDate: Binding(
-								get: { selectedDate },
-								set: { day in
-									jumpDate = day
-									withAnimation(.spring(duration: 0.35)) { showDayStrip = false }
-								}
-							))
-							.frame(maxHeight: 76)
-							.padding(.top, 8)
-							.transition(.move(edge: .top).combined(with: .opacity))
-
-							Divider().padding(.horizontal, 16)
-						}
-
-						TimelineSliderView(
-							selectedDate: $selectedDate,
-							selectedIndex: $selectedIndex,
-							isAtNow: $isAtNow,
-							goToNowPulse: goToNowPulse,
-							jumpDate: $jumpDate
-						)
-						.padding(.bottom, 6)
-					}
+					TimelineSliderView(
+						selectedDate: $selectedDate,
+						selectedIndex: $selectedIndex,
+						isAtNow: $isAtNow,
+						goToNowPulse: goToNowPulse,
+						jumpDate: $jumpDate
+					)
+					.padding(.vertical, 6)
 					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
 
 					if availableRooms.isEmpty {
@@ -99,24 +87,37 @@ struct HomeView: View {
 				.padding(.top, 8)
 			}
 			.scrollIndicators(.hidden)
-			.onScrollGeometryChange(for: CGFloat.self) { geometry in
-				geometry.contentOffset.y + geometry.contentInsets.top
-			} action: { _, offset in
-				if offset < -64 && !showDayStrip {
-					withAnimation(.spring(duration: 0.35)) { showDayStrip = true }
-				} else if offset > 24 && showDayStrip {
-					withAnimation(.spring(duration: 0.35)) { showDayStrip = false }
-				}
-			}
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("Free rooms")
 			.navigationSubtitle(selectedDate.toHomeString())
 			.toolbar {
-				if !isAtNow {
-					ToolbarItem(placement: .topBarTrailing) {
+				ToolbarItemGroup(placement: .topBarTrailing) {
+					if !isAtNow {
 						Button("Now") {
 							goToNowPulse += 1
 						}
+					}
+
+					Button("Jump to date", systemImage: "calendar") {
+						showDatePicker = true
+					}
+					.popover(isPresented: $showDatePicker) {
+						DatePicker(
+							"Jump to date",
+							selection: Binding(
+								get: { selectedDate },
+								set: { day in
+									jumpDate = day
+									showDatePicker = false
+								}
+							),
+							in: jumpRange,
+							displayedComponents: [.date]
+						)
+						.datePickerStyle(.graphical)
+						.frame(width: 320, height: 330)
+						.padding(.horizontal, 8)
+						.presentationCompactAdaptation(.popover)
 					}
 				}
 			}
