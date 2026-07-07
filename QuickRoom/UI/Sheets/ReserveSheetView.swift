@@ -47,23 +47,18 @@ struct ReserveSheetView: View {
 	var body: some View {
 		NavigationStack {
 			VStack {
+				TextField("Add booking name", text: $title)
+					.font(.headline)
+					.submitLabel(.done)
+					.onSubmit { saveRenameIfNeeded() }
+					.padding(.horizontal, 20)
+					.padding(.vertical, 8)
+
+				Divider()
+					.padding(.leading, 20)
+
 				HorizontalDatePickerView(selectedDate: $selectedDate)
 					.frame(maxHeight: 80)
-
-				HStack(spacing: 8) {
-					TextField("Booking name (optional)", text: $title)
-						.textFieldStyle(.roundedBorder)
-						.submitLabel(.done)
-						.onSubmit { saveRenameIfNeeded() }
-
-					if renamePending {
-						Button("Save") { saveRenameIfNeeded() }
-							.buttonStyle(.borderedProminent)
-							.disabled(isProcessing)
-					}
-				}
-				.padding(.horizontal)
-				.animation(.easeInOut(duration: 0.15), value: renamePending)
 				
 				VerticalTimelineView(
 					reservations: dailyReservations,
@@ -84,7 +79,11 @@ struct ReserveSheetView: View {
 				}
 				
 				ToolbarItem(placement: .topBarTrailing) {
-					if myReservation != nil {
+					if renamePending, myReservation != nil {
+						Button("Save") { saveRenameIfNeeded() }
+							.buttonStyle(.borderedProminent)
+							.disabled(isProcessing)
+					} else if myReservation != nil {
 						Button {
 							showDeleteConfirmation = true
 						} label: {
