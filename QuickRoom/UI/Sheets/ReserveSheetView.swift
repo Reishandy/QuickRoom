@@ -64,50 +64,15 @@ struct ReserveSheetView: View {
 				}
 				
 				ToolbarItem(placement: .topBarTrailing) {
-					Button {
-						Task {
-							isProcessing = true
-							defer { isProcessing = false }
-							do {
-								try await reservationService.reserve(roomId: roomId, startTime: startTime, endTime: endTime)
-								// } catch APIError.unauthorized {
-								// TODO: Kick out of the app?
-								// Right now this should not happen right? with the implementation of PR #20?
-							} catch {
-								errorMessage = error.localizedDescription
-							}
-						}
-					} label: {
-						if isProcessing {
-							ProgressView()
-						} else {
-							Label("Add", systemImage: "checkmark")
-						}
-					}
-					.buttonStyle(.borderedProminent)
-					.disabled(isProcessing || startTime >= endTime || hasExistingReservation)
-				}
-				
-				ToolbarItemGroup(placement: .bottomBar) {
-					Button("Starts: \(startTime.toPickerString())") {
-						isStartPickerPresented = true
-					}
-					.popover(isPresented: $isStartPickerPresented) {
-						IntervalWheelPicker(date: $startTime)
-							.frame(width: 320, height: 260)
-							.presentationCompactAdaptation(.popover)
-							.onDisappear {
-								isStartPickerPresented = false
-							}
-					}
-				}
-				
-				ToolbarSpacer(placement: .bottomBar)
-				
-				if myReservation != nil {
-					ToolbarItemGroup(placement: .bottomBar) {
-						Button("Delete", systemImage: "trash", role: .destructive) {
+					if myReservation != nil {
+						Button {
 							showDeleteConfirmation = true
+						} label: {
+							if isProcessing {
+								ProgressView()
+							} else {
+								Label("Delete", systemImage: "trash")
+							}
 						}
 						.tint(.red)
 						.disabled(isProcessing)
@@ -129,22 +94,58 @@ struct ReserveSheetView: View {
 						} message: {
 							Text("Are you sure you want to delete this reservation? This action cannot be undone.")
 						}
+					} else {
+						Button {
+							Task {
+								isProcessing = true
+								defer { isProcessing = false }
+								do {
+									try await reservationService.reserve(roomId: roomId, startTime: startTime, endTime: endTime)
+								} catch {
+									errorMessage = error.localizedDescription
+								}
+							}
+						} label: {
+							if isProcessing {
+								ProgressView()
+							} else {
+								Label("Add", systemImage: "checkmark")
+							}
+						}
+						.buttonStyle(.borderedProminent)
+						.disabled(isProcessing || startTime >= endTime || hasExistingReservation)
 					}
 				}
 				
-				ToolbarSpacer(placement: .bottomBar)
-				
-				ToolbarItemGroup(placement: .bottomBar) {
-					Button("Ends: \(endTime.toPickerString())") {
-						isEndPickerPresented = true
+				if !hasExistingReservation {
+					ToolbarItemGroup(placement: .bottomBar) {
+						Button("Starts: \(startTime.toPickerString())") {
+							isStartPickerPresented = true
+						}
+						.popover(isPresented: $isStartPickerPresented) {
+							IntervalWheelPicker(date: $startTime)
+								.frame(width: 320, height: 260)
+								.presentationCompactAdaptation(.popover)
+								.onDisappear {
+									isStartPickerPresented = false
+								}
+						}
 					}
-					.popover(isPresented: $isEndPickerPresented) {
-						IntervalWheelPicker(date: $endTime)
-							.frame(width: 320, height: 260)
-							.presentationCompactAdaptation(.popover)
-							.onDisappear {
-								isEndPickerPresented = false
-							}
+					
+					ToolbarSpacer(placement: .bottomBar)
+					
+					ToolbarItemGroup(placement: .bottomBar) {
+						Button("Ends: \(endTime.toPickerString())") {
+							isEndPickerPresented = true
+						}
+						.popover(isPresented: $isEndPickerPresented) {
+							IntervalWheelPicker(date: $endTime)
+								.frame(width: 320, height: 260)
+								.presentationCompactAdaptation(.popover)
+								.onDisappear {
+									isEndPickerPresented = false
+								}
+						}
 					}
 				}
 			}

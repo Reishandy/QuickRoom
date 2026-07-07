@@ -88,6 +88,7 @@ struct VerticalTimelineView: View {
 						ReservationBlockView(
 							title: blockTitle,
 							isMine: reservation.isMyReservation,
+							isNew: false,
 							height: max(0, endY - startY)
 						)
 						.offset(x: timeColumnWidth, y: startY)
@@ -99,8 +100,13 @@ struct VerticalTimelineView: View {
 						let endY = TimelineUtilities.yPosition(for: endTime, baseDate: selectedDate, hourHeight: hourHeight)
 						
 						ZStack {
-							ReservationBlockView(title: "New Reservation", isMine: true, height: max(0, endY - startY))
-								.gesture(centerDragGesture)
+							ReservationBlockView(
+								title: "New Reservation",
+								isMine: true,
+								isNew: true,
+								height: max(0, endY - startY)
+							)
+							.gesture(centerDragGesture)
 							
 							VStack(spacing: 0) {
 								dragHandle.gesture(topDragGesture)
@@ -274,22 +280,25 @@ struct VerticalTimelineView: View {
 private struct ReservationBlockView: View {
 	let title: String
 	let isMine: Bool
+	let isNew: Bool
 	let height: CGFloat
 	
 	var body: some View {
+		let themeColor: Color = isMine ? .blue : .red
+		
 		HStack(spacing: 0) {
 			Rectangle()
-				.fill(Color.blue)
+				.fill(themeColor)
 				.frame(width: AppConfig.Timeline.tickWidth)
 			
 			ZStack(alignment: .topLeading) {
 				Rectangle()
-					.fill(isMine ? Color.blue : Color.blue.opacity(0.2))
+					.fill(isNew ? themeColor : themeColor.opacity(0.2))
 				
 				Text(title)
 					.font(.caption)
 					.fontWeight(.semibold)
-					.foregroundColor(isMine ? .white : .blue)
+					.foregroundColor(isNew ? .white : themeColor)
 					.padding(.horizontal, 6)
 					.padding(.vertical, 4)
 			}
