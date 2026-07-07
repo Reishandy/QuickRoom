@@ -17,6 +17,7 @@ struct HomeView: View {
 	@State private var isAtNow = true
 	@State private var goToNowPulse = 0
 	@State private var jumpDate: Date? = nil
+	@State private var showDayStrip = false
 
 	private var availableRooms: [Room] {
 		reservationService.rooms.filter {
@@ -58,14 +59,22 @@ struct HomeView: View {
 			ScrollView {
 				VStack(spacing: 16) {
 					VStack(spacing: 4) {
-						HorizontalDatePickerView(selectedDate: Binding(
-							get: { selectedDate },
-							set: { jumpDate = $0 }
-						))
-						.frame(maxHeight: 76)
-						.padding(.top, 8)
+						// Hidden by default; a pull-down on the page reveals it
+						// (search-bar style) for long jumps across days.
+						if showDayStrip {
+							HorizontalDatePickerView(selectedDate: Binding(
+								get: { selectedDate },
+								set: { day in
+									jumpDate = day
+									withAnimation(.spring(duration: 0.35)) { showDayStrip = false }
+								}
+							))
+							.frame(maxHeight: 76)
+							.padding(.top, 8)
+							.transition(.move(edge: .top).combined(with: .opacity))
 
-						Divider().padding(.horizontal, 16)
+							Divider().padding(.horizontal, 16)
+						}
 
 						TimelineSliderView(
 							selectedDate: $selectedDate,
@@ -90,6 +99,15 @@ struct HomeView: View {
 				.padding(.top, 8)
 			}
 			.scrollIndicators(.hidden)
+			.onScrollGeometryChange(for: CGFloat.self) { geometry in
+				geometry.contentOffset.y + geometry.contentInsets.top
+			} action: { _, offset in
+				if offset < -64 && !showDayStrip {
+					withAnimation(.spring(duration: 0.35)) { showDayStrip = true }
+				} else if offset > 24 && showDayStrip {
+					withAnimation(.spring(duration: 0.35)) { showDayStrip = false }
+				}
+			}
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("Free rooms")
 			.navigationSubtitle(selectedDate.toHomeString())
