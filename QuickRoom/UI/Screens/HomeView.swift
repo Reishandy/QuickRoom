@@ -75,9 +75,15 @@ struct HomeView: View {
 					.padding(.vertical, 6)
 					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
 
-					if availableRooms.isEmpty {
-						emptyCard("There are no available rooms")
-							.transition(.opacity)
+					if reservationService.isLoading && reservationService.rooms.isEmpty {
+						loadingCard
+					} else if availableRooms.isEmpty {
+						emptyCard(
+							"No Rooms Available",
+							systemImage: "door.left.hand.closed",
+							description: "Everything is booked at this time. Try another time or day."
+						)
+						.transition(.opacity)
 					} else {
 						roomList
 							.transition(.opacity)
@@ -87,16 +93,18 @@ struct HomeView: View {
 				.padding(.top, 8)
 			}
 			.scrollIndicators(.hidden)
+			.refreshable {
+				await reservationService.refreshNow()
+			}
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("Free rooms")
 			.navigationSubtitle(selectedDate.toHomeString())
 			.toolbar {
 				ToolbarItemGroup(placement: .topBarTrailing) {
-					if !isAtNow {
-						Button("Now") {
-							goToNowPulse += 1
-						}
+					Button("Now") {
+						goToNowPulse += 1
 					}
+					.disabled(isAtNow)
 
 					Button("Jump to date", systemImage: "calendar") {
 						showDatePicker = true
@@ -167,8 +175,14 @@ struct HomeView: View {
 		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
-					if myBookings.isEmpty {
-						emptyCard("You have no bookings")
+					if reservationService.isLoading && myBookings.isEmpty {
+						loadingCard
+					} else if myBookings.isEmpty {
+						emptyCard(
+							"No Bookings Yet",
+							systemImage: "bookmark",
+							description: "Rooms you book will show up here."
+						)
 					} else {
 						bookingList
 					}
@@ -177,6 +191,9 @@ struct HomeView: View {
 				.padding(.top, 8)
 			}
 			.scrollIndicators(.hidden)
+			.refreshable {
+				await reservationService.refreshNow()
+			}
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("My bookings")
 			.animation(.easeInOut(duration: 0.25), value: myBookings)
@@ -270,9 +287,16 @@ struct HomeView: View {
 			.background(tint.gradient, in: Circle())
 	}
 
-	private func emptyCard(_ message: String) -> some View {
-		Text(message)
-			.foregroundStyle(.secondary)
+	private func emptyCard(_ title: String, systemImage: String, description: String) -> some View {
+		ContentUnavailableView(title, systemImage: systemImage, description: Text(description))
+			.frame(maxWidth: .infinity)
+			.frame(minHeight: 320)
+			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+	}
+
+	private var loadingCard: some View {
+		ProgressView()
+			.controlSize(.large)
 			.frame(maxWidth: .infinity)
 			.frame(minHeight: 320)
 			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
