@@ -29,9 +29,14 @@ class ReservationService {
 	// TODO: Reservation rule
 	func fetchReservationsOnLoad() async throws {
 		isLoading = true
-		defer { isLoading = false }
+		// Auto-refresh must start even when this first fetch fails: before
+		// sign-in the API answers 401, and the refresh loop is what heals
+		// the app once a session exists.
+		defer {
+			isLoading = false
+			startAutoRefresh()
+		}
 		try await refresh()
-		startAutoRefresh()
 	}
 
 	func reserve(roomId: String, startTime: Date, endTime: Date) async throws {

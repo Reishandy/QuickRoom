@@ -13,7 +13,7 @@ struct ContentView: View {
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
 	@Environment(ReservationService.self) private var reservationService
 	@Environment(AuthService.self) private var authService
-	
+
 	let isPreview: Bool
 	
 	@State private var isPermissionSheetShown = false
@@ -73,6 +73,14 @@ struct ContentView: View {
 		}
 		.onChange(of: selectedRoomId) { _, _ in
 			currentMainSheetDetent = .medium
+		}
+		.onChange(of: authService.isSignedIn) { _, signedIn in
+			// The pre-sign-in load 401s now that the API requires a JWT;
+			// refetch as soon as a session exists so the schedule fills
+			// without waiting for the 30s auto-refresh tick.
+			if signedIn {
+				Task { try? await reservationService.fetchReservationsOnLoad() }
+			}
 		}
 		.task {
 			try? await reservationService.fetchReservationsOnLoad()
