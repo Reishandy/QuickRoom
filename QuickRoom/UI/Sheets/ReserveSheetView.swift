@@ -47,15 +47,16 @@ struct ReserveSheetView: View {
 	var body: some View {
 		NavigationStack {
 			VStack {
-				TextField("Add booking name", text: $title)
-					.font(.headline)
+				// Calendar-style title row: an inset grouped field above the
+				// date controls, name-first like the native event sheet.
+				TextField("Booking name", text: $title)
 					.submitLabel(.done)
 					.onSubmit { saveRenameIfNeeded() }
-					.padding(.horizontal, 20)
-					.padding(.vertical, 8)
-
-				Divider()
-					.padding(.leading, 20)
+					.padding(.horizontal, 16)
+					.padding(.vertical, 11)
+					.background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12))
+					.padding(.horizontal, 16)
+					.padding(.top, 8)
 
 				HorizontalDatePickerView(selectedDate: $selectedDate)
 					.frame(maxHeight: 80)
