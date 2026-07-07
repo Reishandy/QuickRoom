@@ -16,6 +16,10 @@ struct TimelineSliderView: View {
 	@Binding var isAtNow: Bool
 	/// Incremented by the parent to snap the scrubber back to now.
 	let goToNowPulse: Int
+	/// Set by the parent to jump to a day (long-distance navigation — the
+	/// ruler alone is too long to fling across several days). Keeps the
+	/// current time-of-day when the target day has it; cleared after use.
+	@Binding var jumpDate: Date?
 
 	@State private var scrollPosition = ScrollPosition(idType: Int.self)
 	
@@ -26,11 +30,12 @@ struct TimelineSliderView: View {
 	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 	
-	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, isAtNow: Binding<Bool> = .constant(true), goToNowPulse: Int = 0) {
+	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, isAtNow: Binding<Bool> = .constant(true), goToNowPulse: Int = 0, jumpDate: Binding<Date?> = .constant(nil)) {
 		self._selectedDate = selectedDate
 		self._selectedIndex = selectedIndex
 		self._isAtNow = isAtNow
 		self.goToNowPulse = goToNowPulse
+		self._jumpDate = jumpDate
 
 		let anchor = Calendar.current.startOfDay(for: .now)
 		self._ticks = State(initialValue: TimelineUtilities.generateTicks(anchorDate: anchor))
@@ -124,6 +129,18 @@ struct TimelineSliderView: View {
 		.onChange(of: goToNowPulse) { _, _ in
 			withAnimation(.bouncy) {
 				selectedIndex = nowIndex
+			}
+		}
+		.onChange(of: jumpDate) { _, target in
+			guard let target else { return }
+			jumpDate = nil
+			let calendar = Calendar.current
+			let wanted = TimelineUtilities.updateDate(selectedDate, toMatchDayOf: target)
+			let idx = ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) && $0.date >= wanted })
+				?? ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) })
+			guard let found = idx else { return }
+			withAnimation(.bouncy) {
+				selectedIndex = max(found, minAllowedIndex)
 			}
 		}
 		.sensoryFeedback(.selection, trigger: selectedIndex)

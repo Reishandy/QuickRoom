@@ -16,6 +16,7 @@ struct HomeView: View {
 
 	@State private var isAtNow = true
 	@State private var goToNowPulse = 0
+	@State private var jumpDate: Date? = nil
 
 	private var availableRooms: [Room] {
 		reservationService.rooms.filter {
@@ -56,13 +57,25 @@ struct HomeView: View {
 		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
-					TimelineSliderView(
-						selectedDate: $selectedDate,
-						selectedIndex: $selectedIndex,
-						isAtNow: $isAtNow,
-						goToNowPulse: goToNowPulse
-					)
-					.padding(.vertical, 6)
+					VStack(spacing: 4) {
+						HorizontalDatePickerView(selectedDate: Binding(
+							get: { selectedDate },
+							set: { jumpDate = $0 }
+						))
+						.frame(maxHeight: 76)
+						.padding(.top, 8)
+
+						Divider().padding(.horizontal, 16)
+
+						TimelineSliderView(
+							selectedDate: $selectedDate,
+							selectedIndex: $selectedIndex,
+							isAtNow: $isAtNow,
+							goToNowPulse: goToNowPulse,
+							jumpDate: $jumpDate
+						)
+						.padding(.bottom, 6)
+					}
 					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
 
 					if availableRooms.isEmpty {
