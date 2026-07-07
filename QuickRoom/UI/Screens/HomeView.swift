@@ -17,6 +17,7 @@ struct HomeView: View {
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
 	@Binding var tab: HomeTab
+	@Binding var newBookingId: String?
 	let onRoomClick: (String) -> Void
 
 	@State private var isAtNow = true
@@ -202,6 +203,13 @@ struct HomeView: View {
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("My bookings")
 			.animation(.easeInOut(duration: 0.25), value: myBookings)
+			.animation(.easeOut(duration: 0.6), value: newBookingId)
+			.task(id: newBookingId) {
+				// Let the fresh booking glow briefly, then fade the tint out.
+				guard newBookingId != nil else { return }
+				try? await Task.sleep(for: .seconds(1.8))
+				newBookingId = nil
+			}
 		}
 	}
 
@@ -236,6 +244,12 @@ struct HomeView: View {
 					.contentShape(Rectangle())
 				}
 				.buttonStyle(.plain)
+				.padding(.horizontal, 10)
+				.background(
+					booking.id == newBookingId ? Color(uiColor: .systemBlue).opacity(0.12) : .clear,
+					in: RoundedRectangle(cornerRadius: 10)
+				)
+				.padding(.horizontal, -10)
 
 				if booking.id != myBookings.last?.id {
 					Divider().padding(.leading, 48)
@@ -312,6 +326,7 @@ struct HomeView: View {
 	@Previewable @State var selectedDate: Date = .now
 	@Previewable @State var selectedIndex: Int? = nil
 	@Previewable @State var tab: HomeTab = .rooms
+	@Previewable @State var newBookingId: String? = nil
 
 	let service = ReservationService()
 	service.rooms = [
@@ -324,6 +339,7 @@ struct HomeView: View {
 		selectedDate: $selectedDate,
 		selectedIndex: $selectedIndex,
 		tab: $tab,
+		newBookingId: $newBookingId,
 		onRoomClick: { _ in }
 	)
 	.environment(service)

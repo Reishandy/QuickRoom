@@ -22,6 +22,7 @@ struct ContentView: View {
 	@State private var selectedRoomId: String? = nil
 	@State private var homeTab: HomeTab = .rooms
 	@State private var bookedPulse = 0
+	@State private var newBookingId: String? = nil
 	
 	private var shouldShowPermissionSheet: Bool {
 		!locationPermissionService.isFullyAuthorized || !notificationPermissionService.isFullyAuthorized
@@ -79,6 +80,7 @@ struct ContentView: View {
 			selectedDate: $selectedDate,
 			selectedIndex: $selectedIndex,
 			tab: $homeTab,
+			newBookingId: $newBookingId,
 			onRoomClick: { roomId in selectedRoomId = roomId }
 		)
 		.sensoryFeedback(.success, trigger: bookedPulse)
@@ -95,10 +97,12 @@ struct ContentView: View {
 					onDismissClick: {
 						selectedRoomId = nil
 					},
-					onBooked: {
-						// Success haptic, close the sheet, land on My bookings.
+					onBooked: { id in
+						// Success haptic, close the sheet, land on My bookings
+						// with the fresh row highlighted.
 						bookedPulse += 1
 						selectedRoomId = nil
+						newBookingId = id
 						homeTab = .bookings
 					}
 				)

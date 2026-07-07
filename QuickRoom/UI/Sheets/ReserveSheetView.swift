@@ -15,7 +15,7 @@ struct ReserveSheetView: View {
 	
 	let roomId: String
 	let onDismissClick: () -> Void
-	let onBooked: () -> Void
+	let onBooked: (String) -> Void
 	
 	@State private var startTime: Date = .now
 	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
@@ -184,8 +184,8 @@ struct ReserveSheetView: View {
 			isProcessing = true
 			defer { isProcessing = false }
 			do {
-				try await reservationService.reserve(roomId: roomId, title: nil, startTime: startTime, endTime: endTime)
-				onBooked()
+				let id = try await reservationService.reserve(roomId: roomId, title: nil, startTime: startTime, endTime: endTime)
+				onBooked(id)
 			} catch {
 				errorMessage = error.localizedDescription
 			}
@@ -198,7 +198,7 @@ struct ReserveSheetView: View {
 		selectedDate: .constant(.now),
 		roomId: "ws-agung",
 		onDismissClick: {},
-		onBooked: {}
+		onBooked: { _ in }
 	)
 	.environment(ReservationService())
 	.environment(AuthService.shared)

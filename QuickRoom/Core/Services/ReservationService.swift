@@ -42,9 +42,11 @@ class ReservationService {
 		try? await refresh()
 	}
 
-	func reserve(roomId: String, title: String?, startTime: Date, endTime: Date) async throws {
-		let _: ReservationDTO = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: roomId, title: title, startTime: startTime, endTime: endTime))
+	@discardableResult
+	func reserve(roomId: String, title: String?, startTime: Date, endTime: Date) async throws -> String {
+		let created: ReservationDTO = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: roomId, title: title, startTime: startTime, endTime: endTime))
 		try await refresh()
+		return created.reservationId
 	}
 
 	func renameReservation(reservationId: String, title: String) async throws {
