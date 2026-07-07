@@ -57,7 +57,7 @@ struct TimelineSliderView: View {
 					.scrollTargetLayout()
 				}
 				.scrollPosition($scrollPosition)
-				.scrollTargetBehavior(.viewAligned)
+				.scrollTargetBehavior(.viewAligned(limitBehavior: .never)) // full-momentum flings, still snaps to a tick
 				.safeAreaPadding(.horizontal, centerPadding)
 				.mask {
 					LinearGradient(
