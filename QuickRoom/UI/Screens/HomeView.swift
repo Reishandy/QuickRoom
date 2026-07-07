@@ -40,17 +40,33 @@ struct HomeView: View {
 		}
 	}
 
-	// Active and upcoming bookings first (soonest on top), then history
-	// (released, cancelled, no-show, past) newest first.
+	// Bookings grouped per day, today first, then coming days (design: Abu).
+	// Past days drop off entirely.
+	private var bookingDays: [(day: Date, title: String, bookings: [Reservation])] {
+		let calendar = Calendar.current
+		let todayStart = calendar.startOfDay(for: .now)
+		let upcoming = reservationService.myReservations.filter {
+			calendar.startOfDay(for: $0.startTime) >= todayStart
+		}
+		let grouped = Dictionary(grouping: upcoming) { calendar.startOfDay(for: $0.startTime) }
+		return grouped.keys.sorted().map { day in
+			(day, dayTitle(day), grouped[day]!.sorted { $0.startTime < $1.startTime })
+		}
+	}
+
+	private func dayTitle(_ day: Date) -> String {
+		let date = DateFormatter()
+		date.dateFormat = "d MMMM"
+		let calendar = Calendar.current
+		if calendar.isDateInToday(day) { return "Today, " + date.string(from: day) }
+		if calendar.isDateInTomorrow(day) { return "Tomorrow, " + date.string(from: day) }
+		let weekday = DateFormatter()
+		weekday.dateFormat = "EEEE, d MMMM"
+		return weekday.string(from: day)
+	}
+
 	private var myBookings: [Reservation] {
-		let now = Date.now
-		let active = reservationService.myReservations
-			.filter { $0.status == "booked" && $0.endTime >= now }
-			.sorted { $0.startTime < $1.startTime }
-		let history = reservationService.myReservations
-			.filter { !($0.status == "booked" && $0.endTime >= now) }
-			.sorted { $0.startTime > $1.startTime }
-		return active + history
+		bookingDays.flatMap(\.bookings)
 	}
 
 	var body: some View {
@@ -206,45 +222,60 @@ struct HomeView: View {
 	}
 
 	private var bookingList: some View {
-		VStack(spacing: 0) {
-			ForEach(myBookings) { booking in
-				Button {
-					selectedDate = booking.startTime
-					onRoomClick(booking.roomId)
-				} label: {
-					HStack(spacing: 12) {
-						rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
-						VStack(alignment: .leading, spacing: 2) {
-							Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
-								.fontWeight(.semibold)
-							if !booking.title.isEmpty {
-								Text(roomName(booking.roomId))
-									.font(.footnote)
-									.foregroundStyle(.secondary)
-							}
-							Text(DateInterval(start: booking.startTime, end: booking.endTime).toReservationString())
-								.font(.subheadline)
-								.foregroundStyle(.secondary)
-						}
-						Spacer()
-						statusBadge(booking.status)
-						Image(systemName: "chevron.right")
-							.font(.footnote.weight(.semibold))
-							.foregroundStyle(.tertiary)
-					}
-					.padding(.vertical, 10)
-					.contentShape(Rectangle())
-				}
-				.buttonStyle(.plain)
+		VStack(alignment: .leading, spacing: 20) {
+			ForEach(bookingDays, id: \.day) { section in
+				VStack(alignment: .leading, spacing: 8) {
+					Text(section.title)
+						.font(.footnote.weight(.semibold))
+						.foregroundStyle(.secondary)
+						.padding(.leading, 4)
 
-				if booking.id != myBookings.last?.id {
-					Divider().padding(.leading, 48)
+					VStack(spacing: 0) {
+						ForEach(section.bookings) { booking in
+							bookingRow(booking)
+
+							if booking.id != section.bookings.last?.id {
+								Divider().padding(.leading, 48)
+							}
+						}
+					}
+					.padding(.horizontal, 16)
+					.padding(.vertical, 6)
+					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
 				}
 			}
 		}
-		.padding(.horizontal, 16)
-		.padding(.vertical, 6)
-		.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+	}
+
+	private func bookingRow(_ booking: Reservation) -> some View {
+		Button {
+			selectedDate = booking.startTime
+			onRoomClick(booking.roomId)
+		} label: {
+			HStack(spacing: 12) {
+				rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
+				VStack(alignment: .leading, spacing: 2) {
+					Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
+						.fontWeight(.semibold)
+					if !booking.title.isEmpty {
+						Text(roomName(booking.roomId))
+							.font(.footnote)
+							.foregroundStyle(.secondary)
+					}
+					Text("\(booking.startTime.toPickerString()) – \(booking.endTime.toPickerString())")
+						.font(.subheadline)
+						.foregroundStyle(.secondary)
+				}
+				Spacer()
+				statusBadge(booking.status)
+				Image(systemName: "chevron.right")
+					.font(.footnote.weight(.semibold))
+					.foregroundStyle(.tertiary)
+			}
+			.padding(.vertical, 10)
+			.contentShape(Rectangle())
+		}
+		.buttonStyle(.plain)
 	}
 
 	// MARK: - Shared bits
