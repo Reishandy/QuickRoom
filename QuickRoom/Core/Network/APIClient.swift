@@ -30,6 +30,10 @@ final class APIClient {
 	private let session: URLSession
 	private let tokenProvider: () -> String?
 
+	/// Fired on any 401 so AuthService can drop the dead session. Set once at
+	/// AuthService init; called off the main actor.
+	var onUnauthorized: (() -> Void)?
+
 	init(baseURL: URL, session: URLSession = .shared, tokenProvider: @escaping () -> String?) {
 		self.baseURL = baseURL
 		self.session = session
@@ -71,7 +75,9 @@ final class APIClient {
 		guard (200..<300).contains(status) else {
 			let message = (try? Self.decoder.decode(ServerErrorBody.self, from: data))?.error ?? "Request failed (\(status))"
 			switch status {
-			case 401: throw APIError.unauthorized
+			case 401:
+				onUnauthorized?()
+				throw APIError.unauthorized
 			case 409: throw APIError.conflict(message)
 			default: throw APIError.server(status: status, message: message)
 			}

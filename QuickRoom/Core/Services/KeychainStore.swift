@@ -21,6 +21,11 @@ enum KeychainStore {
 		set { setString(newValue, for: "current_user") }
 	}
 
+	static var appleUserID: String? {
+		get { string(for: "apple_user_id") }
+		set { setString(newValue, for: "apple_user_id") }
+	}
+
 	private static func string(for key: String) -> String? {
 		var query = baseQuery(for: key)
 		query[kSecReturnData as String] = true

@@ -31,7 +31,7 @@ struct ContentView: View {
 	// TODO: Fetch new reservation with gesture?
 	var body: some View {
 		Group {
-			if preferenceService.hasSeenOnboarding {
+			if preferenceService.hasSeenOnboarding && authService.isSignedIn {
 				baseView
 			} else {
 				OnboardingView()
@@ -43,8 +43,10 @@ struct ContentView: View {
 				.presentationDetents([.large])
 		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
+		.animation(.easeInOut, value: authService.isSignedIn)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
+				await authService.validateAppleCredential()
 				await notificationPermissionService.checkStatus()
 				isPermissionSheetShown = shouldShowPermissionSheet
 			}
@@ -64,6 +66,7 @@ struct ContentView: View {
 			}
 		}
 		.task {
+			await authService.validateAppleCredential()
 			try? await reservationService.fetchReservationsOnLoad()
 		}
 	}
