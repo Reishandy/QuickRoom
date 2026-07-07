@@ -96,7 +96,10 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: true,
 				status: dto.status,
+<<<<<<< HEAD
 				title: dto.title,
+=======
+>>>>>>> origin/main
 				startTime: dto.startTime,
 				endTime: dto.endTime
 			)
@@ -116,7 +119,10 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: myUserId != nil && dto.bookedByUserId == myUserId,
 				status: dto.status,
+<<<<<<< HEAD
 				title: dto.title,
+=======
+>>>>>>> origin/main
 				startTime: dto.startTime,
 				endTime: dto.endTime
 			)

@@ -47,7 +47,11 @@ struct TimelineUtilities {
 				if isExactWorkEnd {
 					incrementMinutes = (weekday == 6) ? 180 : 60
 				} else {
+<<<<<<< HEAD
 					incrementMinutes = AppConfig.Timeline.tickStepMinutes
+=======
+					incrementMinutes = AppConfig.Reservation.timeStepMinutes
+>>>>>>> origin/main
 				}
 			} else if isWeekendOffTime {
 				tickType = .weekend
@@ -57,7 +61,11 @@ struct TimelineUtilities {
 				incrementMinutes = 60
 			} else {
 				tickType = .normalMinute
+<<<<<<< HEAD
 				incrementMinutes = AppConfig.Timeline.tickStepMinutes
+=======
+				incrementMinutes = AppConfig.Reservation.timeStepMinutes
+>>>>>>> origin/main
 			}
 			
 			var tick = TimelineTick(id: id, date: currentDate, hour: hour, type: tickType)
