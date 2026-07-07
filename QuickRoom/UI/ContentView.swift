@@ -13,7 +13,7 @@ struct ContentView: View {
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
 	@Environment(ReservationService.self) private var reservationService
 	@Environment(AuthService.self) private var authService
-
+	
 	let isPreview: Bool
 	
 	@State private var isPermissionSheetShown = false
@@ -29,6 +29,7 @@ struct ContentView: View {
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
 	// TODO: Loading state for UI
+	// TODO: Fetch new reservation with gesture?
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding {
@@ -113,20 +114,16 @@ struct ContentView: View {
 				}
 			)) {
 				if let selectedRoom = selectedRoomId {
-					// TODO: Move navigation stack inside
-					NavigationStack {
-						ReserveSheetView(roomId: selectedRoom)
-							.presentationDetents([.large])
-							.interactiveDismissDisabled(true)
-							.presentationDragIndicator(.hidden)
-							.toolbar {
-								ToolbarItem(placement: .topBarLeading) {
-									Button("Close") {
-										selectedRoomId = nil
-									}
-								}
-							}
-					}
+					ReserveSheetView(
+						selectedDate: $selectedDate,
+						roomId: selectedRoom,
+						onDismissClick: {
+							selectedRoomId = nil
+						}
+					)
+					.presentationDetents([.large])
+					.interactiveDismissDisabled(true)
+					.presentationDragIndicator(.hidden)
 				}
 			}
 		}
