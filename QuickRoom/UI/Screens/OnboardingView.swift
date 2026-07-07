@@ -27,7 +27,14 @@ struct OnboardingView: View {
 			Spacer()
 
 			if authService.isSignedIn {
-				
+				Button {
+					preferenceService.hasSeenOnboarding = true
+				} label: {
+					Text("Continue as \(authService.currentUser?.name ?? "User")")
+						.padding(.vertical, 6)
+						.frame(maxWidth: .infinity)
+				}
+				.buttonStyle(.borderedProminent)
 			} else {
 				SignInWithAppleButton(.signIn) { request in
 					authService.configure(request)
@@ -44,15 +51,6 @@ struct OnboardingView: View {
 				.signInWithAppleButtonStyle(.black)
 				.frame(height: 45)
 				.clipShape(RoundedRectangle(cornerRadius: 24))
-				
-				Button {
-					preferenceService.hasSeenOnboarding = true
-				} label: {
-					Text("Continue as \(authService.currentUser?.name ?? "User")")
-						.padding(.vertical, 6)
-						.frame(maxWidth: .infinity)
-				}
-				.buttonStyle(.borderedProminent)
 			}
 		}
 		.padding(20)
