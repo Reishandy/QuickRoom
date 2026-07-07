@@ -11,7 +11,7 @@ import XCTest
 final class APIClientTests: XCTestCase {
 	func testDecodesReservationWithNanosecondDates() throws {
 		let json = Data("""
-		{"reservations":[{"reservation_id":"res-agung","room_id":"room-ws-agung","zoom_workspace_id":"ws-agung","user_id":"","user_email":"demo.day@adabali.dev","start_time":"2026-07-03T18:23:22.660190936Z","end_time":"2026-07-03T19:53:22.660190936Z","status":"booked","check_in_status":"checked_out","source":"zoom"}]}
+		{"reservations":[{"reservation_id":"res-agung","room_id":"room-ws-agung","zoom_workspace_id":"ws-agung","title":"","user_id":"","user_email":"demo.day@adabali.dev","start_time":"2026-07-03T18:23:22.660190936Z","end_time":"2026-07-03T19:53:22.660190936Z","status":"booked","check_in_status":"checked_out","source":"zoom"}]}
 		""".utf8)
 		let response = try APIClient.decoder.decode(ReservationsResponse.self, from: json)
 		let reservation = try XCTUnwrap(response.reservations.first)
@@ -24,7 +24,7 @@ final class APIClientTests: XCTestCase {
 
 	func testDecodesPlainSecondDates() throws {
 		let json = Data("""
-		{"reservations":[{"reservation_id":"r1","room_id":"room-x","zoom_workspace_id":"ws-x","user_id":"u1","user_email":"e","start_time":"2026-07-05T07:00:00Z","end_time":"2026-07-05T08:00:00Z","status":"booked","check_in_status":"not_checked_in","source":"app","booked_by_user_id":"u1"}]}
+		{"reservations":[{"reservation_id":"r1","room_id":"room-x","zoom_workspace_id":"ws-x","title":"Demo","user_id":"u1","user_email":"e","start_time":"2026-07-05T07:00:00Z","end_time":"2026-07-05T08:00:00Z","status":"booked","check_in_status":"not_checked_in","source":"app","booked_by_user_id":"u1"}]}
 		""".utf8)
 		let response = try APIClient.decoder.decode(ReservationsResponse.self, from: json)
 		XCTAssertEqual(response.reservations.first?.bookedByUserId, "u1")
@@ -49,7 +49,7 @@ final class APIClientTests: XCTestCase {
 	}
 
 	func testEncodesSnakeCaseAndRFC3339() throws {
-		let body = CreateReservationRequest(workspaceId: "ws-ubud", startTime: Date(timeIntervalSince1970: 1783746000), endTime: Date(timeIntervalSince1970: 1783749600))
+		let body = CreateReservationRequest(workspaceId: "ws-ubud", title: "Standup", startTime: Date(timeIntervalSince1970: 1783746000), endTime: Date(timeIntervalSince1970: 1783749600))
 		let json = try XCTUnwrap(String(data: APIClient.encoder.encode(body), encoding: .utf8))
 		XCTAssertTrue(json.contains("\"workspace_id\":\"ws-ubud\""), json)
 		XCTAssertTrue(json.contains("\"start_time\":\"2026-07-11T05:00:00Z\""), json)
@@ -67,7 +67,7 @@ final class APIClientTests: XCTestCase {
 
 		StubURLProtocol.respond(status: 409, body: #"{"error":"room already booked"}"#)
 		do {
-			let _: StatusResponse = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: "w", startTime: .now, endTime: .now))
+			let _: StatusResponse = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: "w", title: nil, startTime: .now, endTime: .now))
 			XCTFail("expected throw")
 		} catch APIError.conflict(let message) {
 			XCTAssertTrue(message.contains("already booked"))

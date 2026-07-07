@@ -14,11 +14,8 @@ struct HomeView: View {
 	@Binding var selectedIndex: Int?
 	let onRoomClick: (String) -> Void
 
-	private enum Tab {
-		case freeRooms, myBookings
-	}
-
-	@State private var tab: Tab = .freeRooms
+	@State private var isAtNow = true
+	@State private var goToNowPulse = 0
 
 	private var availableRooms: [Room] {
 		reservationService.rooms.filter {
@@ -43,14 +40,30 @@ struct HomeView: View {
 	}
 
 	var body: some View {
-		ZStack(alignment: .bottom) {
-			VStack(alignment: .leading, spacing: 16) {
-				header
+		TabView {
+			Tab("Free rooms", systemImage: "door.left.hand.open") {
+				freeRoomsTab
+			}
+			Tab("My bookings", systemImage: "bookmark") {
+				myBookingsTab
+			}
+		}
+	}
 
-				if tab == .freeRooms {
-					TimelineSliderView(selectedDate: $selectedDate, selectedIndex: $selectedIndex)
-						.padding(.vertical, 6)
-						.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+	// MARK: - Free rooms
+
+	private var freeRoomsTab: some View {
+		NavigationStack {
+			ScrollView {
+				VStack(spacing: 16) {
+					TimelineSliderView(
+						selectedDate: $selectedDate,
+						selectedIndex: $selectedIndex,
+						isAtNow: $isAtNow,
+						goToNowPulse: goToNowPulse
+					)
+					.padding(.vertical, 6)
+					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
 
 					if availableRooms.isEmpty {
 						emptyCard("There are no available rooms")
@@ -59,124 +72,131 @@ struct HomeView: View {
 						roomList
 							.transition(.opacity)
 					}
-				} else {
+				}
+				.padding(.horizontal, 16)
+				.padding(.top, 8)
+			}
+			.scrollIndicators(.hidden)
+			.background(Color(uiColor: .systemGroupedBackground))
+			.navigationTitle("Free rooms")
+			.navigationSubtitle(selectedDate.toHomeString())
+			.toolbar {
+				if !isAtNow {
+					ToolbarItem(placement: .topBarTrailing) {
+						Button("Now") {
+							goToNowPulse += 1
+						}
+					}
+				}
+			}
+			.animation(.easeInOut(duration: 0.25), value: availableRooms)
+			.animation(.easeInOut(duration: 0.2), value: isAtNow)
+		}
+	}
+
+	private var roomList: some View {
+		VStack(spacing: 0) {
+			ForEach(availableRooms) { room in
+				Button {
+					onRoomClick(room.id)
+				} label: {
+					HStack(spacing: 12) {
+						roomIcon(room)
+						VStack(alignment: .leading, spacing: 2) {
+							Text(room.name)
+								.fontWeight(.semibold)
+							Text("For \(room.capacity) people")
+								.font(.subheadline)
+								.foregroundStyle(.secondary)
+						}
+						Spacer()
+						Image(systemName: "chevron.right")
+							.font(.footnote.weight(.semibold))
+							.foregroundStyle(.tertiary)
+					}
+					.padding(.vertical, 10)
+					.contentShape(Rectangle())
+				}
+				.buttonStyle(.plain)
+
+				if room.id != availableRooms.last?.id {
+					Divider().padding(.leading, 48)
+				}
+			}
+		}
+		.padding(.horizontal, 16)
+		.padding(.vertical, 6)
+		.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+	}
+
+	// MARK: - My bookings
+
+	private var myBookingsTab: some View {
+		NavigationStack {
+			ScrollView {
+				VStack(spacing: 16) {
 					if myBookings.isEmpty {
 						emptyCard("You have no bookings")
 					} else {
 						bookingList
 					}
 				}
+				.padding(.horizontal, 16)
+				.padding(.top, 8)
 			}
-			.padding(.horizontal, 16)
-
-			tabBar
+			.scrollIndicators(.hidden)
+			.background(Color(uiColor: .systemGroupedBackground))
+			.navigationTitle("My bookings")
+			.animation(.easeInOut(duration: 0.25), value: myBookings)
 		}
-		.frame(maxWidth: .infinity, maxHeight: .infinity)
-		.background(Color(uiColor: .systemGroupedBackground))
-		.animation(.easeInOut(duration: 0.2), value: tab)
-		.animation(.easeInOut(duration: 0.25), value: availableRooms)
-		.animation(.easeInOut(duration: 0.25), value: myBookings)
-	}
-
-	@ViewBuilder
-	private var header: some View {
-		VStack(alignment: .leading, spacing: 2) {
-			if tab == .freeRooms {
-				Text("Available rooms for")
-					.font(.title2)
-					.fontWeight(.semibold)
-				Text(selectedDate.toHomeString())
-					.font(.title)
-					.bold()
-					.contentTransition(.numericText())
-					.animation(.default, value: selectedDate)
-			} else {
-				Text("My bookings")
-					.font(.title)
-					.bold()
-			}
-		}
-		.padding(.top, 12)
-	}
-
-	private var roomList: some View {
-		ScrollView {
-			VStack(spacing: 0) {
-				ForEach(availableRooms) { room in
-					Button {
-						onRoomClick(room.id)
-					} label: {
-						HStack(spacing: 12) {
-							rowIcon("door.left.hand.open")
-							VStack(alignment: .leading, spacing: 2) {
-								Text(room.name)
-									.fontWeight(.semibold)
-								Text("For \(room.capacity) people")
-									.font(.subheadline)
-									.foregroundStyle(.secondary)
-							}
-							Spacer()
-							Image(systemName: "chevron.right")
-								.font(.footnote.weight(.semibold))
-								.foregroundStyle(.tertiary)
-						}
-						.padding(.vertical, 10)
-						.contentShape(Rectangle())
-					}
-					.buttonStyle(.plain)
-
-					if room.id != availableRooms.last?.id {
-						Divider().padding(.leading, 48)
-					}
-				}
-			}
-			.padding(.horizontal, 16)
-			.padding(.vertical, 6)
-			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-			.padding(.bottom, 90) // keep the last row clear of the tab bar
-		}
-		.scrollIndicators(.hidden)
 	}
 
 	private var bookingList: some View {
-		ScrollView {
-			VStack(spacing: 0) {
-				ForEach(myBookings) { booking in
-					Button {
-						selectedDate = booking.startTime
-						onRoomClick(booking.roomId)
-					} label: {
-						HStack(spacing: 12) {
-							rowIcon("bookmark.fill")
-							VStack(alignment: .leading, spacing: 2) {
-								Text(reservationService.rooms.first(where: { $0.id == booking.roomId })?.name ?? booking.roomId)
-									.fontWeight(.semibold)
-								Text(DateInterval(start: booking.startTime, end: booking.endTime).toReservationString())
-									.font(.subheadline)
+		VStack(spacing: 0) {
+			ForEach(myBookings) { booking in
+				Button {
+					selectedDate = booking.startTime
+					onRoomClick(booking.roomId)
+				} label: {
+					HStack(spacing: 12) {
+						rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
+						VStack(alignment: .leading, spacing: 2) {
+							Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
+								.fontWeight(.semibold)
+							if !booking.title.isEmpty {
+								Text(roomName(booking.roomId))
+									.font(.footnote)
 									.foregroundStyle(.secondary)
 							}
-							Spacer()
-							statusBadge(booking.status)
-							Image(systemName: "chevron.right")
-								.font(.footnote.weight(.semibold))
-								.foregroundStyle(.tertiary)
+							Text(DateInterval(start: booking.startTime, end: booking.endTime).toReservationString())
+								.font(.subheadline)
+								.foregroundStyle(.secondary)
 						}
-						.padding(.vertical, 10)
-						.contentShape(Rectangle())
+						Spacer()
+						statusBadge(booking.status)
+						Image(systemName: "chevron.right")
+							.font(.footnote.weight(.semibold))
+							.foregroundStyle(.tertiary)
 					}
-					.buttonStyle(.plain)
+					.padding(.vertical, 10)
+					.contentShape(Rectangle())
+				}
+				.buttonStyle(.plain)
 
-					if booking.id != myBookings.last?.id {
-						Divider().padding(.leading, 48)
-					}
+				if booking.id != myBookings.last?.id {
+					Divider().padding(.leading, 48)
 				}
 			}
-			.padding(.horizontal, 16)
-			.padding(.vertical, 6)
-			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-			.padding(.bottom, 90)
 		}
-		.scrollIndicators(.hidden)
+		.padding(.horizontal, 16)
+		.padding(.vertical, 6)
+		.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+	}
+
+	// MARK: - Shared bits
+
+	private func roomName(_ roomId: String) -> String {
+		reservationService.rooms.first(where: { $0.id == roomId })?.name ?? roomId
 	}
 
 	private func statusBadge(_ status: String) -> some View {
@@ -195,55 +215,42 @@ struct HomeView: View {
 			.background(color.opacity(0.12), in: Capsule())
 	}
 
-	private func rowIcon(_ systemName: String) -> some View {
+	// Every room gets its own symbol and tint (mentor feedback) — assigned
+	// from a stable hash of the workspace id so it never changes between
+	// launches and new rooms need no app update.
+	private static let iconPalette: [(symbol: String, tint: Color)] = [
+		("mountain.2.fill", .orange),
+		("water.waves", .teal),
+		("leaf.fill", .green),
+		("sun.max.fill", .yellow),
+		("moon.stars.fill", .indigo),
+		("tree.fill", .mint),
+		("flame.fill", .red),
+		("tornado", .cyan),
+		("bird.fill", .purple),
+		("fish.fill", .blue),
+	]
+
+	private func roomIcon(_ room: Room) -> some View {
+		let stableHash = room.id.unicodeScalars.reduce(0) { $0 &* 31 &+ Int($1.value) }
+		let entry = Self.iconPalette[abs(stableHash) % Self.iconPalette.count]
+		return rowIcon(entry.symbol, tint: entry.tint)
+	}
+
+	private func rowIcon(_ systemName: String, tint: Color) -> some View {
 		Image(systemName: systemName)
 			.font(.system(size: 15, weight: .semibold))
 			.foregroundStyle(.white)
 			.frame(width: 36, height: 36)
-			.background(Color(uiColor: .systemBlue).gradient, in: Circle())
+			.background(tint.gradient, in: Circle())
 	}
 
 	private func emptyCard(_ message: String) -> some View {
 		Text(message)
 			.foregroundStyle(.secondary)
-			.frame(maxWidth: .infinity, maxHeight: .infinity)
+			.frame(maxWidth: .infinity)
+			.frame(minHeight: 320)
 			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
-			.padding(.bottom, 90)
-	}
-
-	private var tabBar: some View {
-		HStack(spacing: 4) {
-			tabButton(.freeRooms, icon: "door.left.hand.open", label: "Free rooms")
-			tabButton(.myBookings, icon: "bookmark.circle.fill", label: "My bookings")
-		}
-		.padding(6)
-		.background(.regularMaterial, in: Capsule())
-		.shadow(color: .black.opacity(0.12), radius: 12, y: 4)
-		.padding(.bottom, 8)
-	}
-
-	private func tabButton(_ target: Tab, icon: String, label: String) -> some View {
-		Button {
-			tab = target
-		} label: {
-			HStack(spacing: 6) {
-				Image(systemName: icon)
-				Text(label)
-					.font(.footnote.weight(.semibold))
-			}
-			.foregroundStyle(tab == target ? Color(uiColor: .systemBlue) : Color(uiColor: .label))
-			.padding(.horizontal, 14)
-			.padding(.vertical, 10)
-			.background {
-				if tab == target {
-					Capsule()
-						.fill(Color(uiColor: .systemBackground))
-						.shadow(color: .black.opacity(0.08), radius: 4, y: 1)
-				}
-			}
-		}
-		.buttonStyle(.plain)
-		.sensoryFeedback(.selection, trigger: tab)
 	}
 }
 

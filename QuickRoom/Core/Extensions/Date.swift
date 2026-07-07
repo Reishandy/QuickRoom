@@ -24,6 +24,14 @@ extension Date {
 		return formatter.string(from: self)
 	}
 	
+	/// Formats a date into "Wed 9" for scrubber day separators
+	func toDayLabel(locale: Locale = .current) -> String {
+		let formatter = DateFormatter()
+		formatter.locale = locale
+		formatter.dateFormat = "EEE d"
+		return formatter.string(from: self)
+	}
+
 	/// Formats a date into "09.30"
 	func toPickerString(locale: Locale = .current) -> String {
 		let formatter = DateFormatter()

@@ -11,7 +11,12 @@ import Combine
 struct TimelineSliderView: View {
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
-	
+	/// True while the scrubber sits on the current time; the parent shows its
+	/// own return-to-now control (title-row button, per mentor feedback).
+	@Binding var isAtNow: Bool
+	/// Incremented by the parent to snap the scrubber back to now.
+	let goToNowPulse: Int
+
 	@State private var scrollPosition = ScrollPosition(idType: Int.self)
 	
 	@State private var ticks: [TimelineTick]
@@ -21,10 +26,12 @@ struct TimelineSliderView: View {
 	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 	
-	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>) {
+	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, isAtNow: Binding<Bool> = .constant(true), goToNowPulse: Int = 0) {
 		self._selectedDate = selectedDate
 		self._selectedIndex = selectedIndex
-		
+		self._isAtNow = isAtNow
+		self.goToNowPulse = goToNowPulse
+
 		let anchor = Calendar.current.startOfDay(for: .now)
 		self._ticks = State(initialValue: TimelineUtilities.generateTicks(anchorDate: anchor))
 	}
@@ -94,30 +101,7 @@ struct TimelineSliderView: View {
 						.foregroundStyle(selectedIndex == nowIndex ? Color.blue : Color(uiColor: .label))
 				}
 				.rotationEffect(.degrees(180))
-				
-				if selectedIndex != nowIndex {
-					HStack(alignment: .center) {
-						Button {
-							withAnimation(.bouncy) {
-								selectedIndex = nowIndex
-							}
-						} label: {
-							Image(systemName: "arrow.backward.circle.fill")
-								.font(.title)
-								.foregroundStyle(Color(UIColor.systemBlue))
-								.frame(width: 60, height: 60)
-								.background(.thinMaterial, in: Circle())
-						}
-						.buttonStyle(.plain)
-						.padding(.leading, 12)
-						.padding(.top, 4)
-						
-						Spacer()
-					}
-					.transition(.opacity.combined(with: .scale(scale: 0.9)))
-				}
 			}
-			.animation(.default, value: selectedIndex != nowIndex)
 		}
 		.frame(height: 70)
 		.onAppear {
@@ -133,6 +117,14 @@ struct TimelineSliderView: View {
 		}
 		.onReceive(timer) { _ in
 			updateCurrentTimeConstraints()
+		}
+		.onChange(of: selectedIndex) { _, newIndex in
+			isAtNow = newIndex == nowIndex
+		}
+		.onChange(of: goToNowPulse) { _, _ in
+			withAnimation(.bouncy) {
+				selectedIndex = nowIndex
+			}
 		}
 		.sensoryFeedback(.selection, trigger: selectedIndex)
 		.sensoryFeedback(.error, trigger: boundaryHitTrigger)
@@ -159,25 +151,37 @@ struct TimelineTickView: View, Equatable {
 	
 	var body: some View {
 		let isPast = tick.id < nowIndex
-		
-		let isMajorTick = (tick.type == .normalHour)
-		let baseColor: Color = isMajorTick ? Color(uiColor: .label) : Color(uiColor: .quaternaryLabel)
+
+		// Day starts are the prominent separators (mentor feedback: the tall
+		// lines must divide days, not hours); hours are medium, half-hours
+		// faint — otherwise it reads like a ruler.
+		let baseColor: Color = tick.isDayStart ? Color(uiColor: .label)
+			: tick.type == .normalHour ? Color(uiColor: .tertiaryLabel)
+			: Color(uiColor: .quaternaryLabel)
 		let opacity: Double = (isPast || tick.type == .offHour || tick.type == .weekend) ? 0.3 : 1.0
 		let tickColor = baseColor.opacity(opacity)
-		
+		let height: CGFloat = tick.isDayStart ? 36 : tick.type == .normalHour ? 24 : 14
+
 		VStack(spacing: 8) {
 			Capsule()
 				.fill(tickColor)
-				.frame(width: 2.5, height: 32)
-				.padding(.top, 8)
-			
+				.frame(width: tick.isDayStart ? 3 : 2, height: height)
+				.padding(.top, tick.isDayStart ? 4 : 4 + (36 - height) / 2)
+
 			if tick.isLabelTick {
 				let labelText = tick.type == .weekend ? "Weekend" : "Off"
 				Text(labelText)
+					.font(.caption)
 					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
+					.fixedSize()
+			} else if tick.isDayStart {
+				Text(tick.date.toDayLabel())
+					.font(.caption.weight(.semibold))
+					.foregroundStyle(Color(uiColor: .label).opacity(isPast ? 0.3 : 1.0))
 					.fixedSize()
 			} else if tick.type == .normalHour {
 				Text("\(tick.hour)")
+					.font(.caption)
 					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
 					.fixedSize()
 			} else {

@@ -47,7 +47,7 @@ struct TimelineUtilities {
 				if isExactWorkEnd {
 					incrementMinutes = (weekday == 6) ? 180 : 60
 				} else {
-					incrementMinutes = AppConfig.Reservation.timeStepMinutes
+					incrementMinutes = AppConfig.Timeline.tickStepMinutes
 				}
 			} else if isWeekendOffTime {
 				tickType = .weekend
@@ -57,10 +57,15 @@ struct TimelineUtilities {
 				incrementMinutes = 60
 			} else {
 				tickType = .normalMinute
-				incrementMinutes = AppConfig.Reservation.timeStepMinutes
+				incrementMinutes = AppConfig.Timeline.tickStepMinutes
 			}
 			
-			generatedTicks.append(TimelineTick(id: id, date: currentDate, hour: hour, type: tickType))
+			var tick = TimelineTick(id: id, date: currentDate, hour: hour, type: tickType)
+			// Day boundaries are the scrubber's real separators (mentor
+			// feedback: separate days, not hours) — each weekday's
+			// work-start tick carries the day label.
+			tick.isDayStart = isExactWorkStart
+			generatedTicks.append(tick)
 			id += 1
 			
 			var nextDate = calendar.date(byAdding: .minute, value: incrementMinutes, to: currentDate)!

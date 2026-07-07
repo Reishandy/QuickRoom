@@ -16,6 +16,7 @@ struct ReserveSheetView: View {
 	let roomId: String
 	let onDismissClick: () -> Void
 	
+	@State private var title: String = ""
 	@State private var startTime: Date = .now
 	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
 	@State private var isProcessing = false
@@ -38,12 +39,31 @@ struct ReserveSheetView: View {
 		dailyReservations.contains { $0.isMyReservation }
 	}
 	
-	// TODO: Delete reservation
+	private var renamePending: Bool {
+		guard let mine = myReservation else { return false }
+		return title != mine.title
+	}
+
 	var body: some View {
 		NavigationStack {
 			VStack {
 				HorizontalDatePickerView(selectedDate: $selectedDate)
 					.frame(maxHeight: 80)
+
+				HStack(spacing: 8) {
+					TextField("Booking name (optional)", text: $title)
+						.textFieldStyle(.roundedBorder)
+						.submitLabel(.done)
+						.onSubmit { saveRenameIfNeeded() }
+
+					if renamePending {
+						Button("Save") { saveRenameIfNeeded() }
+							.buttonStyle(.borderedProminent)
+							.disabled(isProcessing)
+					}
+				}
+				.padding(.horizontal)
+				.animation(.easeInOut(duration: 0.15), value: renamePending)
 				
 				VerticalTimelineView(
 					reservations: dailyReservations,
@@ -100,7 +120,7 @@ struct ReserveSheetView: View {
 								isProcessing = true
 								defer { isProcessing = false }
 								do {
-									try await reservationService.reserve(roomId: roomId, startTime: startTime, endTime: endTime)
+									try await reservationService.reserve(roomId: roomId, title: title.isEmpty ? nil : title, startTime: startTime, endTime: endTime)
 								} catch {
 									errorMessage = error.localizedDescription
 								}
@@ -183,6 +203,22 @@ struct ReserveSheetView: View {
 			}
 			.task {
 				try? await reservationService.fetchReservationsOnLoad()
+				if let mine = myReservation {
+					title = mine.title
+				}
+			}
+		}
+	}
+
+	private func saveRenameIfNeeded() {
+		guard let mine = myReservation, title != mine.title else { return }
+		Task {
+			isProcessing = true
+			defer { isProcessing = false }
+			do {
+				try await reservationService.renameReservation(reservationId: mine.id, title: title)
+			} catch {
+				errorMessage = error.localizedDescription
 			}
 		}
 	}
