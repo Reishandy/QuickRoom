@@ -14,6 +14,16 @@ struct VerticalTimelineView: View {
 	
 	private let hourHeight: CGFloat = 80
 	private let timeColumnWidth: CGFloat = 52
+
+	// Working hours plus one context hour each side — a midnight-to-6am
+	// dead zone is just scrolling for nothing.
+	private let displayStartHour = AppConfig.WorkingHours.start - 1
+	private let displayEndHour = AppConfig.WorkingHours.end + 1
+
+	/// Y position within the displayed window (not the full day).
+	private func y(for date: Date) -> CGFloat {
+		TimelineUtilities.yPosition(for: date, baseDate: selectedDate, hourHeight: hourHeight) - CGFloat(displayStartHour) * hourHeight
+	}
 	
 	@State private var dragInitialStart: Date?
 	@State private var dragInitialEnd: Date?
@@ -27,7 +37,7 @@ struct VerticalTimelineView: View {
 			ScrollViewReader { proxy in
 				ZStack(alignment: .topLeading) {
 					VStack(spacing: 0) {
-						ForEach(0...24, id: \.self) { hour in
+						ForEach(displayStartHour...displayEndHour, id: \.self) { hour in
 							HStack(spacing: 8) {
 								Text(String(format: "%02d:00", hour == 24 ? 0 : hour))
 									.font(.caption)
@@ -49,7 +59,7 @@ struct VerticalTimelineView: View {
 						handleTapOnGrid(at: location.y)
 					}
 					
-					let topGreyHeight = CGFloat(AppConfig.WorkingHours.start) * hourHeight
+					let topGreyHeight = CGFloat(AppConfig.WorkingHours.start - displayStartHour) * hourHeight
 					if topGreyHeight > 0 {
 						Rectangle()
 							.fill(Color.gray.opacity(0.1))
@@ -58,8 +68,8 @@ struct VerticalTimelineView: View {
 							.allowsHitTesting(false)
 					}
 					
-					let bottomGreyStart = CGFloat(AppConfig.WorkingHours.end) * hourHeight
-					let bottomGreyHeight = CGFloat(24 - AppConfig.WorkingHours.end) * hourHeight
+					let bottomGreyStart = CGFloat(AppConfig.WorkingHours.end - displayStartHour) * hourHeight
+					let bottomGreyHeight = CGFloat(displayEndHour - AppConfig.WorkingHours.end) * hourHeight
 					if bottomGreyHeight > 0 {
 						Rectangle()
 							.fill(Color.gray.opacity(0.1))
@@ -69,7 +79,7 @@ struct VerticalTimelineView: View {
 					}
 					
 					if isToday {
-						let nowY = TimelineUtilities.yPosition(for: Date(), baseDate: selectedDate, hourHeight: hourHeight)
+						let nowY = y(for: Date())
 						if nowY > 0 {
 							Rectangle()
 								.fill(Color.gray.opacity(0.1))
@@ -80,8 +90,8 @@ struct VerticalTimelineView: View {
 					}
 					
 					ForEach(reservations) { reservation in
-						let startY = TimelineUtilities.yPosition(for: reservation.startTime, baseDate: selectedDate, hourHeight: hourHeight)
-						let endY = TimelineUtilities.yPosition(for: reservation.endTime, baseDate: selectedDate, hourHeight: hourHeight)
+						let startY = y(for: reservation.startTime)
+						let endY = y(for: reservation.endTime)
 						
 						let blockTitle = !reservation.title.isEmpty ? reservation.title
 							: reservation.isMyReservation ? "My Reservation" : "Reservation"
@@ -97,8 +107,8 @@ struct VerticalTimelineView: View {
 					}
 					
 					if !hasExistingReservation {
-						let startY = TimelineUtilities.yPosition(for: startTime, baseDate: selectedDate, hourHeight: hourHeight)
-						let endY = TimelineUtilities.yPosition(for: endTime, baseDate: selectedDate, hourHeight: hourHeight)
+						let startY = y(for: startTime)
+						let endY = y(for: endTime)
 						
 						ZStack {
 							ReservationBlockView(
@@ -124,8 +134,8 @@ struct VerticalTimelineView: View {
 					
 					if isToday {
 						TimelineView(.everyMinute) { context in
-							let nowY = TimelineUtilities.yPosition(for: context.date, baseDate: selectedDate, hourHeight: hourHeight)
-							let totalHeight = 24.0 * hourHeight
+							let nowY = y(for: context.date)
+							let totalHeight = CGFloat(displayEndHour - displayStartHour) * hourHeight
 							
 							if nowY >= 0 && nowY <= totalHeight {
 								HStack(spacing: 0) {
@@ -149,8 +159,8 @@ struct VerticalTimelineView: View {
 				.padding(.top, 20)
 				.padding(.bottom, 40)
 				.onAppear {
-					// Auto-scroll so the user isn't looking at midnight
-					let scrollTarget = isToday ? max(Calendar.current.component(.hour, from: Date()) - 1, 0) : max(AppConfig.WorkingHours.start - 1, 0)
+					// Auto-scroll to now (the window already starts near the workday)
+					let scrollTarget = isToday ? min(max(Calendar.current.component(.hour, from: Date()) - 1, displayStartHour), displayEndHour) : displayStartHour
 					proxy.scrollTo(scrollTarget, anchor: .top)
 					setupInitialTime()
 				}
@@ -195,7 +205,7 @@ struct VerticalTimelineView: View {
 	}
 	
 	private func handleTapOnGrid(at yPosition: CGFloat) {
-		let tappedTime = TimelineUtilities.date(for: yPosition, baseDate: selectedDate, hourHeight: hourHeight)
+		let tappedTime = TimelineUtilities.date(for: yPosition + CGFloat(displayStartHour) * hourHeight, baseDate: selectedDate, hourHeight: hourHeight)
 		let snappedTime = TimelineUtilities.snapToTimeStep(tappedTime)
 		let duration = endTime.timeIntervalSince(startTime)
 		let newEnd = snappedTime.addingTimeInterval(duration)
