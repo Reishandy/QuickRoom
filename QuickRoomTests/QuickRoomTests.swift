@@ -10,6 +10,6 @@ import XCTest
 
 final class SmokeTests: XCTestCase {
 	func testHarnessRuns() {
-		XCTAssertEqual(StaticRooms.rooms.isEmpty, false)
+		XCTAssertLessThan(AppConfig.WorkingHours.start, AppConfig.WorkingHours.end)
 	}
 }

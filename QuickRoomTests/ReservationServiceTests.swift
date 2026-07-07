@@ -16,16 +16,12 @@ final class ReservationServiceTests: XCTestCase {
 		""".utf8))
 	}
 
-	func testOverlayUsesServerNamesAndTracksBacking() {
+	func testMapRoomsUsesWorkspaceIdAndCapacity() {
 		let server = try! APIClient.decoder.decode(RoomsResponse.self, from: Data("""
-		{"rooms":[{"room_id":"room-ws-agung","zoom_workspace_id":"ws-agung","name":"Agung (Renamed)","floor":"","capacity":80,"has_tv":true,"is_zoom_room":true}]}
+		{"rooms":[{"room_id":"room-ws-agung","zoom_workspace_id":"ws-agung","name":"Agung","floor":"","capacity":8,"has_tv":true,"is_zoom_room":true}]}
 		""".utf8)).rooms
-		let result = ReservationService.overlayServerRooms(onto: StaticRooms.rooms, server: server)
-		XCTAssertEqual(result.rooms.first(where: { $0.id == "ws-agung" })?.name, "Agung (Renamed)")
-		XCTAssertEqual(result.serverBacked, ["ws-agung"])
-		// Unknown-to-server rooms keep their static name and polygons.
-		XCTAssertEqual(result.rooms.first(where: { $0.id == "ws-ubud" })?.name, "BINB Ubud Zoom")
-		XCTAssertEqual(result.rooms.count, StaticRooms.rooms.count)
+		let rooms = ReservationService.mapRooms(server)
+		XCTAssertEqual(rooms, [Room(id: "ws-agung", name: "Agung", capacity: 8)])
 	}
 
 	func testMapReservationsFiltersToBookedAndMarksMine() {
@@ -47,14 +43,12 @@ final class ReservationServiceTests: XCTestCase {
 		XCTAssertEqual(mapped.first?.isMyReservation, false)
 	}
 
-	func testStatusDisabledForUnbackedRoom() {
+	func testStatusDisabledOutsideWorkingHours() {
 		let service = ReservationService()
-		service.serverBacked = ["ws-agung"]
-		let ubud = StaticRooms.rooms.first(where: { $0.id == "ws-ubud" })!
-		// 10:00 is inside working hours; the room is unbacked so still disabled.
-		let workingHour = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: .now)!
-		if case .disabled = service.status(for: ubud, at: workingHour) {} else {
-			XCTFail("expected .disabled for room missing from the server")
+		let room = Room(id: "ws-ubud", name: "Ubud", capacity: 4)
+		let lateHour = Calendar.current.date(bySettingHour: 23, minute: 0, second: 0, of: .now)!
+		if case .disabled = service.status(for: room, at: lateHour) {} else {
+			XCTFail("expected .disabled outside working hours")
 		}
 	}
 }

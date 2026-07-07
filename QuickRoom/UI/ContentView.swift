@@ -13,11 +13,10 @@ struct ContentView: View {
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
 	@Environment(ReservationService.self) private var reservationService
 	@Environment(AuthService.self) private var authService
-
+	
 	let isPreview: Bool
 	
 	@State private var isPermissionSheetShown = false
-	@State private var currentMainSheetDetent: PresentationDetent = .medium
 	@State private var selectedDate: Date = .now
 	@State private var selectedIndex: Int? = nil
 	@State private var selectedRoomId: String? = nil
@@ -28,12 +27,12 @@ struct ContentView: View {
 	
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
-	// TODO: Consolidate working hours
 	// TODO: Loading state for UI
+	// TODO: Fetch new reservation with gesture?
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding && authService.isSignedIn {
-				baseScreen
+				baseView
 			} else {
 				OnboardingView()
 			}
@@ -43,22 +42,8 @@ struct ContentView: View {
 				.interactiveDismissDisabled()
 				.presentationDetents([.large])
 		}
-		.sheet(isPresented: Binding(
-			get: { isPreview ? true : (!shouldShowPermissionSheet && preferenceService.hasSeenOnboarding && authService.isSignedIn) },
-			set: { _ in }
-		)) {
-			sheetScreen
-				.presentationDetents(
-					[.height(90), .medium, .large],
-					selection: $currentMainSheetDetent
-				)
-				.presentationBackgroundInteraction(.enabled)
-				.interactiveDismissDisabled(true)
-				.presentationDragIndicator(.visible)
-		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
 		.animation(.easeInOut, value: authService.isSignedIn)
-		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {
 				await authService.validateAppleCredential()
@@ -71,9 +56,6 @@ struct ContentView: View {
 		}
 		.onChange(of: notificationPermissionService.isFullyAuthorized) { _, _ in
 			isPermissionSheetShown = shouldShowPermissionSheet
-		}
-		.onChange(of: selectedRoomId) { _, _ in
-			currentMainSheetDetent = .medium
 		}
 		.onChange(of: authService.isSignedIn) { _, signedIn in
 			// The pre-sign-in load 401s now that the API requires a JWT;
@@ -90,62 +72,35 @@ struct ContentView: View {
 	}
 	
 	@ViewBuilder
-	private var baseScreen: some View {
-		ZStack {
-			ZStack(alignment: .top) {
-				HomeView(
-					selectedDate: selectedDate,
-					onInteract: { currentMainSheetDetent = .height(90) },
-					onRoomClick: { roomId in selectedRoomId = roomId }
+	private var baseView: some View {
+		HomeView(
+			selectedDate: $selectedDate,
+			selectedIndex: $selectedIndex,
+			onRoomClick: { roomId in selectedRoomId = roomId }
+		)
+		.sheet(isPresented: Binding(
+			get: { selectedRoomId != nil },
+			set: { isPresented in
+				if !isPresented { selectedRoomId = nil }
+			}
+		)) {
+			if let selectedRoom = selectedRoomId {
+				ReserveSheetView(
+					selectedDate: $selectedDate,
+					roomId: selectedRoom,
+					onDismissClick: {
+						selectedRoomId = nil
+					}
 				)
-				
-				Text(selectedDate.toHomeString())
-					.bold()
-					.padding()
-					.background(.thinMaterial, in: Capsule())
-					.shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-					.padding(.top, 60)
-			}
-			.task {
-				if !isPreview {
-					await notificationPermissionService.checkStatus()
-					isPermissionSheetShown = shouldShowPermissionSheet
-				}
-			}
-			.opacity(selectedRoomId == nil ? 1 : 0)
-			.allowsHitTesting(selectedRoomId == nil)
-			
-			if let selectedRoomId = selectedRoomId {
-				NavigationStack {
-					ReserveView(roomId: selectedRoomId)
-						.toolbar {
-							ToolbarItem(placement: .topBarLeading) {
-								Button {
-									self.selectedRoomId = nil
-								} label: {
-									Image(systemName: "chevron.left")
-								}
-							}
-						}
-				}
-				.transition(.move(edge: .trailing))
+				.presentationDetents([.large])
+				.interactiveDismissDisabled(true)
+				.presentationDragIndicator(.hidden)
 			}
 		}
-		.animation(.default, value: selectedRoomId)
-	}
-	
-	@ViewBuilder
-	private var sheetScreen: some View {
-		if let selectedRoom = selectedRoomId {
-			ReserveSheetView(roomId: selectedRoom)
-		} else {
-			HomeSheetView(
-				currentSheetDetent: $currentMainSheetDetent,
-				selectedDate: $selectedDate,
-				selectedIndex: $selectedIndex,
-				reservations: reservationService.reservations
-			) { roomId in
-				selectedRoomId = roomId
+		.task {
+			if !isPreview {
+				await notificationPermissionService.checkStatus()
+				isPermissionSheetShown = shouldShowPermissionSheet
 			}
 		}
 	}

@@ -14,6 +14,12 @@ enum AppConfig {
 		static let end = 19
 	}
 	
+	enum Reservation {
+		static let timeStepMinutes = 15
+		static let minDuration: TimeInterval = 900 // 15 mins
+		static let maxDuration: TimeInterval = 7200 // 2 hours
+	}
+	
 	enum Beacon {
 		static let proximityUUID: UUID = {
 			guard let uuid = UUID(uuidString: AppEnvironment.beaconUUIDString) else {
@@ -28,6 +34,7 @@ enum AppConfig {
 		static let baseURL = URL(string: AppEnvironment.apiBaseURLString)!
 	}
 	
+	// TODO: Make sure this match what the api request for the lookahead
 	enum Timeline {
 		static let tickWidth: CGFloat = 8
 		static let lookbehindDays = 2

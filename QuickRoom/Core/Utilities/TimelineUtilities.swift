@@ -95,4 +95,175 @@ struct TimelineUtilities {
 		
 		return generatedTicks
 	}
+	
+	// MARK: - For VerticalTimelineView
+	
+	/// Snaps a given date to the nearest 15-minute interval
+	static func snapToTimeStep(_ date: Date) -> Date {
+		let calendar = Calendar.current
+		var components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+		let minute = components.minute ?? 0
+		
+		let step = AppConfig.Reservation.timeStepMinutes
+		let remainder = minute % step
+		
+		if remainder < (step / 2) {
+			components.minute = minute - remainder
+		} else {
+			components.minute = minute + (step - remainder)
+		}
+		components.second = 0
+		components.nanosecond = 0
+		
+		// Calendar automatically handles minute overflow (e.g., minute 60 becomes +1 hour)
+		return calendar.date(from: components) ?? date
+	}
+	
+	static func workingHoursStart(for date: Date) -> Date {
+		let midnight = Calendar.current.startOfDay(for: date)
+		return Calendar.current.date(bySettingHour: AppConfig.WorkingHours.start, minute: 0, second: 0, of: midnight) ?? date
+	}
+	
+	static func workingHoursEnd(for date: Date) -> Date {
+		let midnight = Calendar.current.startOfDay(for: date)
+		return Calendar.current.date(bySettingHour: AppConfig.WorkingHours.end, minute: 0, second: 0, of: midnight) ?? date
+	}
+	
+	/// Returns 00:00 for the given date
+	static func midnight(for date: Date) -> Date {
+		Calendar.current.startOfDay(for: date)
+	}
+	
+	/// Calculates Y position from Midnight (00:00) instead of the start of the workday
+	static func yPosition(for time: Date, baseDate: Date, hourHeight: CGFloat) -> CGFloat {
+		let start = midnight(for: baseDate)
+		let diff = time.timeIntervalSince(start)
+		return CGFloat(diff / 3600.0) * hourHeight
+	}
+	
+	/// Calculates Date from a Y position based on Midnight (00:00)
+	static func date(for yPosition: CGFloat, baseDate: Date, hourHeight: CGFloat) -> Date {
+		let start = midnight(for: baseDate)
+		let hours = yPosition / hourHeight
+		return start.addingTimeInterval(TimeInterval(hours * 3600.0))
+	}
+	
+	static func isOverlapping(start: Date, end: Date, reservations: [Reservation]) -> Bool {
+		for res in reservations {
+			// Checks if the proposed time range intersects with an existing reservation
+			if start < res.endTime && end > res.startTime {
+				return true
+			}
+		}
+		return false
+	}
+	
+	/// Scans the day for the next free 15-minute slot that doesn't overlap with existing reservations
+	static func findNextAvailableSlot(on date: Date, duration: TimeInterval = AppConfig.Reservation.minDuration, reservations: [Reservation]) -> (start: Date, end: Date)? {
+		let now = Date()
+		let workingStart = workingHoursStart(for: date)
+		let workingEnd = workingHoursEnd(for: date)
+		let isToday = Calendar.current.isDate(date, inSameDayAs: now)
+		
+		if !isToday && date < now { return nil }
+		
+		var currentStart = snapToTimeStep(isToday ? max(now, workingStart) : workingStart)
+		if currentStart < now { currentStart = currentStart.addingTimeInterval(AppConfig.Reservation.minDuration) }
+		
+		while currentStart.addingTimeInterval(duration) <= workingEnd {
+			let currentEnd = currentStart.addingTimeInterval(duration)
+			if !isOverlapping(start: currentStart, end: currentEnd, reservations: reservations) {
+				return (currentStart, currentEnd)
+			}
+			currentStart = currentStart.addingTimeInterval(AppConfig.Reservation.minDuration)
+		}
+		
+		return nil
+	}
+	
+	/// Safely transfers the hour/minute of a time to match the year/month/day of a new base date (Used when changing days via the horizontal picker)
+	static func updateDate(_ time: Date, toMatchDayOf baseDate: Date) -> Date {
+		let calendar = Calendar.current
+		let baseComponents = calendar.dateComponents([.year, .month, .day], from: baseDate)
+		let timeComponents = calendar.dateComponents([.hour, .minute, .second], from: time)
+		
+		var newComponents = DateComponents()
+		newComponents.year = baseComponents.year
+		newComponents.month = baseComponents.month
+		newComponents.day = baseComponents.day
+		newComponents.hour = timeComponents.hour
+		newComponents.minute = timeComponents.minute
+		newComponents.second = timeComponents.second
+		
+		return calendar.date(from: newComponents) ?? time
+	}
+	
+	static func resolveTimeSelection(
+		proposedStart: Date,
+		proposedEnd: Date,
+		selectedDate: Date,
+		reservations: [Reservation],
+		changedBoundary: TimeBoundary
+	) -> (start: Date, end: Date) {
+		var start = snapToTimeStep(proposedStart)
+		var end = snapToTimeStep(proposedEnd)
+		
+		let now = Date()
+		let isToday = Calendar.current.isDate(selectedDate, inSameDayAs: now)
+		let limitStart = workingHoursStart(for: selectedDate)
+		let limitEnd = workingHoursEnd(for: selectedDate)
+		
+		var minValidStart = limitStart
+		if isToday && now > limitStart {
+			let snappedNow = snapToTimeStep(now)
+			minValidStart = snappedNow < now ? snappedNow.addingTimeInterval(TimeInterval(AppConfig.Reservation.timeStepMinutes * 60)) : snappedNow
+		}
+		
+		if start < minValidStart {
+			start = minValidStart
+		}
+		
+		if end > limitEnd {
+			end = limitEnd
+		}
+		
+		let currentDuration = end.timeIntervalSince(start)
+		let minDuration = AppConfig.Reservation.minDuration
+		let maxDuration = AppConfig.Reservation.maxDuration
+		
+		if currentDuration < minDuration {
+			if changedBoundary == .start {
+				end = start.addingTimeInterval(minDuration)
+			} else {
+				start = end.addingTimeInterval(-minDuration)
+			}
+		} else if currentDuration > maxDuration {
+			if changedBoundary == .start {
+				start = end.addingTimeInterval(-maxDuration)
+			} else {
+				end = start.addingTimeInterval(maxDuration)
+			}
+		}
+		
+		if end > limitEnd {
+			end = limitEnd
+			start = max(minValidStart, end.addingTimeInterval(-minDuration))
+		}
+		if start < minValidStart {
+			start = minValidStart
+			end = min(limitEnd, start.addingTimeInterval(minDuration))
+		}
+		
+		if isOverlapping(start: start, end: end, reservations: reservations) {
+			if let safeSlot = findNextAvailableSlot(on: selectedDate, duration: end.timeIntervalSince(start), reservations: reservations) {
+				start = safeSlot.start
+				end = safeSlot.end
+			} else if let minimalSlot = findNextAvailableSlot(on: selectedDate, duration: minDuration, reservations: reservations) {
+				start = minimalSlot.start
+				end = minimalSlot.end
+			}
+		}
+		
+		return (start, end)
+	}
 }

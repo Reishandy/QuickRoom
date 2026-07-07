@@ -11,6 +11,16 @@
 		8B35F0042FF9F48700C0F97F /* Release.xcconfig in Resources */ = {isa = PBXBuildFile; fileRef = 8B35F0032FF9F48700C0F97F /* Release.xcconfig */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		9A0000000000000000000004 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8B35E7C72FF5F41400C0F97F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8B35E7CE2FF5F41400C0F97F;
+			remoteInfo = QuickRoom;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		8B35E7CF2FF5F41400C0F97F /* QuickRoom.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = QuickRoom.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8B35F0012FF9F48200C0F97F /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
@@ -132,24 +142,6 @@
 		};
 /* End PBXNativeTarget section */
 
-/* Begin PBXContainerItemProxy section */
-		9A0000000000000000000004 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8B35E7C72FF5F41400C0F97F /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 8B35E7CE2FF5F41400C0F97F;
-			remoteInfo = QuickRoom;
-		};
-/* End PBXContainerItemProxy section */
-
-/* Begin PBXTargetDependency section */
-		9A0000000000000000000005 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 8B35E7CE2FF5F41400C0F97F /* QuickRoom */;
-			targetProxy = 9A0000000000000000000004 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
-
 /* Begin PBXProject section */
 		8B35E7C72FF5F41400C0F97F /* Project object */ = {
 			isa = PBXProject;
@@ -222,6 +214,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9A0000000000000000000005 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8B35E7CE2FF5F41400C0F97F /* QuickRoom */;
+			targetProxy = 9A0000000000000000000004 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		8B35E7D82FF5F41600C0F97F /* Debug */ = {
