@@ -38,6 +38,18 @@ final class ReservationServiceTests: XCTestCase {
 		XCTAssertEqual(mapped.first?.roomId, "ws-ubud")
 	}
 
+	func testMapMineKeepsAllStatuses() {
+		let dtos = [
+			makeReservationDTO(id: "active", bookedBy: "u-1"),
+			makeReservationDTO(id: "gone", status: "released", bookedBy: "u-1"),
+			makeReservationDTO(id: "off", status: "cancelled", bookedBy: "u-1"),
+		]
+		let mine = ReservationService.mapMine(dtos)
+		XCTAssertEqual(mine.map(\.id), ["active", "gone", "off"])
+		XCTAssertEqual(mine.map(\.status), ["booked", "released", "cancelled"])
+		XCTAssertTrue(mine.allSatisfy(\.isMyReservation))
+	}
+
 	func testMapReservationsWithNoUserMarksNothingMine() {
 		let mapped = ReservationService.mapReservations([makeReservationDTO(bookedBy: "u-1")], myUserId: nil)
 		XCTAssertEqual(mapped.first?.isMyReservation, false)
