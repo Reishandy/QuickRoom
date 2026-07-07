@@ -14,7 +14,6 @@ class ReservationService {
 	var rooms: [Room] = []
 	var reservations: [Reservation] = []
 	var isLoading: Bool = false
-	var serverBacked: Set<String> = []
 
 	private let client: APIClient
 	private let auth: AuthService
@@ -23,7 +22,6 @@ class ReservationService {
 	init(client: APIClient = .shared, auth: AuthService = .shared) {
 		self.client = client
 		self.auth = auth
-		self.rooms = StaticRooms.rooms
 	}
 
 	// TODO: Reservation rule
@@ -50,9 +48,6 @@ class ReservationService {
 	}
 
 	func status(for room: Room, at time: Date) -> RoomStatus {
-		guard serverBacked.contains(room.id) else {
-			return .disabled
-		}
 		guard Calendar.current.isWithinWorkingHours(time) else {
 			return .disabled
 		}
@@ -73,21 +68,12 @@ class ReservationService {
 		async let reservationsResponse: ReservationsResponse = client.get("/reservations")
 		let (serverRooms, serverReservations) = try await (roomsResponse.rooms, reservationsResponse.reservations)
 
-		let overlay = Self.overlayServerRooms(onto: StaticRooms.rooms, server: serverRooms)
-		rooms = overlay.rooms
-		serverBacked = overlay.serverBacked
+		rooms = Self.mapRooms(serverRooms)
 		reservations = Self.mapReservations(serverReservations, myUserId: auth.currentUser?.userId)
 	}
 
-	/// Static polygons + live server names. A mapped room the server no
-	/// longer reports stays visible but renders disabled via `serverBacked`.
-	static func overlayServerRooms(onto staticRooms: [Room], server: [RoomDTO]) -> (rooms: [Room], serverBacked: Set<String>) {
-		let byWorkspaceId = Dictionary(uniqueKeysWithValues: server.map { ($0.zoomWorkspaceId, $0) })
-		let rooms = staticRooms.map { room in
-			guard let dto = byWorkspaceId[room.id] else { return room }
-			return Room(id: room.id, name: dto.name, relativePoints: room.relativePoints)
-		}
-		return (rooms, Set(staticRooms.map(\.id).filter { byWorkspaceId[$0] != nil }))
+	static func mapRooms(_ dtos: [RoomDTO]) -> [Room] {
+		dtos.map { Room(id: $0.zoomWorkspaceId, name: $0.name, capacity: $0.capacity) }
 	}
 
 	/// Only `booked` reservations block a room; no-shows, releases and
