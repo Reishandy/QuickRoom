@@ -46,14 +46,14 @@ struct PermissionSheetView: View {
 					iconName: "bell.fill",
 					isGranted: notificationPermissionService.isAuthorized,
 					title: "Allow Notifications",
-					description: "We need your notification permission to let you know of upoming reservations, overstay, auto release notifications, and more."
+					description: "We need your notification permission to let you know of upoming reservations, rservation ending, auto release notifications, and more."
 				)
 				
 				PermissionRowView(
 					iconName: "clock.fill",
 					isGranted: notificationPermissionService.isTimeSensitiveEnabled,
 					title: "Time-Sensitive Alerts",
-					description: "We need time sensitive notification support to let you know of important notifications such as auto release and overstay notification when you are focused."
+					description: "We need time sensitive notification support to let you know of important notifications such as auto release and your reservation ending notification when you are focused."
 				)
 			}
 			
