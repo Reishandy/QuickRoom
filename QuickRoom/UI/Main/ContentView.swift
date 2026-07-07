@@ -32,7 +32,7 @@ struct ContentView: View {
 	// TODO: Loading state for UI
 	var body: some View {
 		Group {
-			if preferenceService.hasSeenOnboarding {
+			if preferenceService.hasSeenOnboarding && authService.isSignedIn {
 				baseScreen
 			} else {
 				OnboardingView()
@@ -44,7 +44,7 @@ struct ContentView: View {
 				.presentationDetents([.large])
 		}
 		.sheet(isPresented: Binding(
-			get: { isPreview ? true : !shouldShowPermissionSheet },
+			get: { isPreview ? true : (!shouldShowPermissionSheet && preferenceService.hasSeenOnboarding && authService.isSignedIn) },
 			set: { _ in }
 		)) {
 			sheetScreen
@@ -57,6 +57,7 @@ struct ContentView: View {
 				.presentationDragIndicator(.visible)
 		}
 		.animation(.easeInOut, value: preferenceService.hasSeenOnboarding)
+		.animation(.easeInOut, value: authService.isSignedIn)
 		.animation(.easeInOut, value: selectedRoomId)
 		.onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
 			Task {

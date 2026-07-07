@@ -24,6 +24,9 @@ final class AuthService {
 		if KeychainStore.sessionToken != nil, let json = KeychainStore.currentUserJSON {
 			currentUser = try? JSONDecoder().decode(UserDTO.self, from: Data(json.utf8))
 		}
+		client.onUnauthorized = { [weak self] in
+			Task { @MainActor in self?.handleUnauthorized() }
+		}
 	}
 
 	func configure(_ request: ASAuthorizationAppleIDRequest) {
@@ -59,6 +62,16 @@ final class AuthService {
 
 	func signOut() async {
 		let _: StatusResponse? = try? await client.post("/auth/logout")
+		KeychainStore.sessionToken = nil
+		KeychainStore.currentUserJSON = nil
+		currentUser = nil
+	}
+
+	/// The backend rejected our token (expired or revoked). Clear the session
+	/// locally — no /auth/logout call: the token is already dead, and a network
+	/// call from here could loop straight back into another 401.
+	@MainActor
+	func handleUnauthorized() {
 		KeychainStore.sessionToken = nil
 		KeychainStore.currentUserJSON = nil
 		currentUser = nil

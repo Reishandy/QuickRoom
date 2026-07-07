@@ -41,10 +41,12 @@ struct OnboardingView: View {
 				.padding(.horizontal, 40)
 			}
 
-			Button(authService.isSignedIn ? "Continue" : "Skip for now") {
-				preferenceService.hasSeenOnboarding = true
+			if authService.isSignedIn {
+				Button("Continue") {
+					preferenceService.hasSeenOnboarding = true
+				}
+				.buttonStyle(.borderedProminent)
 			}
-			.buttonStyle(.borderedProminent)
 		}
 		.alert("Sign-in failed", isPresented: Binding(
 			get: { signInErrorMessage != nil },
