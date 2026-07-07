@@ -9,46 +9,231 @@ import SwiftUI
 
 struct HomeView: View {
 	@Environment(ReservationService.self) private var reservationService
-	
-	let selectedDate: Date
-	var onInteract: () -> Void
+
+	@Binding var selectedDate: Date
+	@Binding var selectedIndex: Int?
 	let onRoomClick: (String) -> Void
-	
-	// TODO: Replace with UI redesign
+
+	private enum Tab {
+		case freeRooms, myBookings
+	}
+
+	@State private var tab: Tab = .freeRooms
+
+	private var availableRooms: [Room] {
+		reservationService.rooms.filter {
+			if case .available = reservationService.status(for: $0, at: selectedDate) {
+				return true
+			}
+			return false
+		}
+	}
+
+	private var myBookings: [Reservation] {
+		reservationService.reservations
+			.filter(\.isMyReservation)
+			.sorted { $0.startTime < $1.startTime }
+	}
+
 	var body: some View {
-		ScrollView(.horizontal, showsIndicators: false) {
-			Image("floorplan")
-				.resizable()
-				.scaledToFit()
-				.containerRelativeFrame(.vertical)
-				.overlay {
-					GeometryReader { geo in
-						ZStack {
-							ForEach(StaticRooms.rooms) { room in
-								RoomOverlayView(
-									room: room,
-									status: reservationService.status(for: room, at: selectedDate),
-									geoSize: geo.size
-								) { roomId in
-									onRoomClick(roomId)
-								}
-							}
-						}
+		ZStack(alignment: .bottom) {
+			VStack(alignment: .leading, spacing: 16) {
+				header
+
+				if tab == .freeRooms {
+					TimelineSliderView(selectedDate: $selectedDate, selectedIndex: $selectedIndex)
+						.padding(.vertical, 6)
+						.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+
+					if availableRooms.isEmpty {
+						emptyCard("There are no available rooms")
+					} else {
+						roomList
+					}
+				} else {
+					if myBookings.isEmpty {
+						emptyCard("You have no bookings")
+					} else {
+						bookingList
 					}
 				}
-		}
-		.simultaneousGesture(
-			DragGesture().onChanged { _ in
-				onInteract()
 			}
-		)
+			.padding(.horizontal, 16)
+
+			tabBar
+		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.background(Color(uiColor: .systemGroupedBackground))
+		.animation(.easeInOut(duration: 0.2), value: tab)
+	}
+
+	@ViewBuilder
+	private var header: some View {
+		VStack(alignment: .leading, spacing: 2) {
+			if tab == .freeRooms {
+				Text("Available rooms for")
+					.font(.title2)
+					.fontWeight(.semibold)
+				Text(selectedDate.toHomeString())
+					.font(.title)
+					.bold()
+					.contentTransition(.numericText())
+					.animation(.default, value: selectedDate)
+			} else {
+				Text("My bookings")
+					.font(.title)
+					.bold()
+			}
+		}
+		.padding(.top, 12)
+	}
+
+	private var roomList: some View {
+		ScrollView {
+			VStack(spacing: 0) {
+				ForEach(availableRooms) { room in
+					Button {
+						onRoomClick(room.id)
+					} label: {
+						HStack(spacing: 12) {
+							rowIcon("door.left.hand.open")
+							VStack(alignment: .leading, spacing: 2) {
+								Text(room.name)
+									.fontWeight(.semibold)
+								Text("For \(room.capacity) people")
+									.font(.subheadline)
+									.foregroundStyle(.secondary)
+							}
+							Spacer()
+							Image(systemName: "chevron.right")
+								.font(.footnote.weight(.semibold))
+								.foregroundStyle(.tertiary)
+						}
+						.padding(.vertical, 10)
+						.contentShape(Rectangle())
+					}
+					.buttonStyle(.plain)
+
+					if room.id != availableRooms.last?.id {
+						Divider().padding(.leading, 48)
+					}
+				}
+			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 6)
+			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+			.padding(.bottom, 90) // keep the last row clear of the tab bar
+		}
+		.scrollIndicators(.hidden)
+	}
+
+	private var bookingList: some View {
+		ScrollView {
+			VStack(spacing: 0) {
+				ForEach(myBookings) { booking in
+					Button {
+						selectedDate = booking.startTime
+						onRoomClick(booking.roomId)
+					} label: {
+						HStack(spacing: 12) {
+							rowIcon("bookmark.fill")
+							VStack(alignment: .leading, spacing: 2) {
+								Text(reservationService.rooms.first(where: { $0.id == booking.roomId })?.name ?? booking.roomId)
+									.fontWeight(.semibold)
+								Text(DateInterval(start: booking.startTime, end: booking.endTime).toReservationString())
+									.font(.subheadline)
+									.foregroundStyle(.secondary)
+							}
+							Spacer()
+							Image(systemName: "chevron.right")
+								.font(.footnote.weight(.semibold))
+								.foregroundStyle(.tertiary)
+						}
+						.padding(.vertical, 10)
+						.contentShape(Rectangle())
+					}
+					.buttonStyle(.plain)
+
+					if booking.id != myBookings.last?.id {
+						Divider().padding(.leading, 48)
+					}
+				}
+			}
+			.padding(.horizontal, 16)
+			.padding(.vertical, 6)
+			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+			.padding(.bottom, 90)
+		}
+		.scrollIndicators(.hidden)
+	}
+
+	private func rowIcon(_ systemName: String) -> some View {
+		Image(systemName: systemName)
+			.font(.system(size: 15, weight: .semibold))
+			.foregroundStyle(.white)
+			.frame(width: 36, height: 36)
+			.background(Color(uiColor: .systemBlue).gradient, in: Circle())
+	}
+
+	private func emptyCard(_ message: String) -> some View {
+		Text(message)
+			.foregroundStyle(.secondary)
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
+			.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+			.padding(.bottom, 90)
+	}
+
+	private var tabBar: some View {
+		HStack(spacing: 4) {
+			tabButton(.freeRooms, icon: "door.left.hand.open", label: "Free rooms")
+			tabButton(.myBookings, icon: "bookmark.circle.fill", label: "My bookings")
+		}
+		.padding(6)
+		.background(.regularMaterial, in: Capsule())
+		.shadow(color: .black.opacity(0.12), radius: 12, y: 4)
+		.padding(.bottom, 8)
+	}
+
+	private func tabButton(_ target: Tab, icon: String, label: String) -> some View {
+		Button {
+			tab = target
+		} label: {
+			HStack(spacing: 6) {
+				Image(systemName: icon)
+				Text(label)
+					.font(.footnote.weight(.semibold))
+			}
+			.foregroundStyle(tab == target ? Color(uiColor: .systemBlue) : Color(uiColor: .label))
+			.padding(.horizontal, 14)
+			.padding(.vertical, 10)
+			.background {
+				if tab == target {
+					Capsule()
+						.fill(Color(uiColor: .systemBackground))
+						.shadow(color: .black.opacity(0.08), radius: 4, y: 1)
+				}
+			}
+		}
+		.buttonStyle(.plain)
+		.sensoryFeedback(.selection, trigger: tab)
 	}
 }
 
 #Preview {
-	HomeView(
-		selectedDate: .now,
-		onInteract: {},
+	@Previewable @State var selectedDate: Date = .now
+	@Previewable @State var selectedIndex: Int? = nil
+
+	let service = ReservationService()
+	service.rooms = [
+		Room(id: "ws-petang", name: "Petang", capacity: 6),
+		Room(id: "ws-mengwi", name: "Mengwi", capacity: 2),
+		Room(id: "ws-bedugul", name: "Bedugul", capacity: 2),
+	]
+
+	return HomeView(
+		selectedDate: $selectedDate,
+		selectedIndex: $selectedIndex,
 		onRoomClick: { _ in }
 	)
+	.environment(service)
 }

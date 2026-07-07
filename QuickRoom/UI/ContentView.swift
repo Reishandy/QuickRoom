@@ -17,7 +17,6 @@ struct ContentView: View {
 	let isPreview: Bool
 	
 	@State private var isPermissionSheetShown = false
-	@State private var currentMainSheetDetent: PresentationDetent = .medium
 	@State private var selectedDate: Date = .now
 	@State private var selectedIndex: Int? = nil
 	@State private var selectedRoomId: String? = nil
@@ -56,9 +55,6 @@ struct ContentView: View {
 		.onChange(of: notificationPermissionService.isFullyAuthorized) { _, _ in
 			isPermissionSheetShown = shouldShowPermissionSheet
 		}
-		.onChange(of: selectedRoomId) { _, _ in
-			currentMainSheetDetent = .medium
-		}
 		.onChange(of: authService.isSignedIn) { _, signedIn in
 			// The pre-sign-in load 401s now that the API requires a JWT;
 			// refetch as soon as a session exists so the schedule fills
@@ -74,57 +70,28 @@ struct ContentView: View {
 	
 	@ViewBuilder
 	private var baseView: some View {
-		ZStack(alignment: .top) {
-			HomeView(
-				selectedDate: selectedDate,
-				onInteract: { currentMainSheetDetent = .height(90) },
-				onRoomClick: { roomId in selectedRoomId = roomId }
-			)
-			
-			Text(selectedDate.toHomeString())
-				.bold()
-				.padding()
-				.background(.thinMaterial, in: Capsule())
-				.shadow(color: .black.opacity(0.15), radius: 8, y: 4)
-				.padding(.top, 60)
-		}
+		HomeView(
+			selectedDate: $selectedDate,
+			selectedIndex: $selectedIndex,
+			onRoomClick: { roomId in selectedRoomId = roomId }
+		)
 		.sheet(isPresented: Binding(
-			get: { isPreview ? true : !shouldShowPermissionSheet },
-			set: { _ in }
-		)) {
-			HomeSheetView(
-				currentSheetDetent: $currentMainSheetDetent,
-				selectedDate: $selectedDate,
-				selectedIndex: $selectedIndex,
-				reservations: reservationService.reservations
-			) { roomId in
-				selectedRoomId = roomId
+			get: { selectedRoomId != nil },
+			set: { isPresented in
+				if !isPresented { selectedRoomId = nil }
 			}
-			.presentationDetents(
-				[.height(90), .medium, .large],
-				selection: $currentMainSheetDetent
-			)
-			.presentationBackgroundInteraction(.enabled)
-			.interactiveDismissDisabled(true)
-			.presentationDragIndicator(.visible)
-			.sheet(isPresented: Binding(
-				get: { selectedRoomId != nil },
-				set: { isPresented in
-					if !isPresented { selectedRoomId = nil }
-				}
-			)) {
-				if let selectedRoom = selectedRoomId {
-					ReserveSheetView(
-						selectedDate: $selectedDate,
-						roomId: selectedRoom,
-						onDismissClick: {
-							selectedRoomId = nil
-						}
-					)
-					.presentationDetents([.large])
-					.interactiveDismissDisabled(true)
-					.presentationDragIndicator(.hidden)
-				}
+		)) {
+			if let selectedRoom = selectedRoomId {
+				ReserveSheetView(
+					selectedDate: $selectedDate,
+					roomId: selectedRoom,
+					onDismissClick: {
+						selectedRoomId = nil
+					}
+				)
+				.presentationDetents([.large])
+				.interactiveDismissDisabled(true)
+				.presentationDragIndicator(.hidden)
 			}
 		}
 		.task {

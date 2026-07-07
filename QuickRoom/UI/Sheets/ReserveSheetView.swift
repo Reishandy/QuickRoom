@@ -53,7 +53,7 @@ struct ReserveSheetView: View {
 					hasExistingReservation: hasExistingReservation
 				)
 			}
-			.navigationTitle(StaticRooms.rooms.filter{ $0.id == roomId }.first?.name ?? roomId)
+			.navigationTitle(reservationService.rooms.first(where: { $0.id == roomId })?.name ?? roomId)
 			.navigationSubtitle(selectedDate.toReservationString())
 			.navigationBarTitleDisplayMode(.inline)
 			.toolbar {
