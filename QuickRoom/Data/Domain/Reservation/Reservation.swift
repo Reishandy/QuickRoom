@@ -12,6 +12,7 @@ struct Reservation: Identifiable, Hashable {
 	let roomId: String
 	let isMyReservation: Bool
 	let status: String
+	var checkInStatus: String = "not_checked_in"
 	let title: String
 	let startTime: Date
 	let endTime: Date

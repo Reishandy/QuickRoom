@@ -24,10 +24,15 @@ struct HomeView: View {
 	@State private var showDatePicker = false
 	@State private var selectedRoomId: String? = nil
 	@State private var bookedPulse = 0
+	@State private var settledSlotState: SlotState = .open
+	@State private var lastOpenDate: Date = .now
 
 	private var availableRooms: [Room] {
-		reservationService.rooms.filter {
-			if case .available = reservationService.status(for: $0, at: selectedDate) {
+		// While the scrubber is mid-flight over a closed stretch the list keeps
+		// showing the last open moment, so nothing flashes underneath.
+		let date = slotState == .open ? selectedDate : lastOpenDate
+		return reservationService.rooms.filter {
+			if case .available = reservationService.status(for: $0, at: date) {
 				return true
 			}
 			return false
@@ -125,14 +130,14 @@ struct HomeView: View {
 
 					if reservationService.isLoading && reservationService.rooms.isEmpty {
 						loadingCard
-					} else if slotState == .weekend {
+					} else if settledSlotState == .weekend {
 						emptyCard(
 							"Closed for the Weekend",
 							systemImage: "beach.umbrella",
 							description: "The space is closed on weekends. Jump to a weekday to book a room."
 						)
 						.transition(.opacity)
-					} else if slotState == .closed {
+					} else if settledSlotState == .closed {
 						emptyCard(
 							"Closed at This Time",
 							systemImage: "moon.zzz",
@@ -189,8 +194,26 @@ struct HomeView: View {
 				}
 			}
 			.animation(.easeInOut(duration: 0.25), value: availableRooms)
-			.animation(.easeInOut(duration: 0.25), value: slotState)
+			.animation(.easeInOut(duration: 0.25), value: settledSlotState)
 			.animation(.easeInOut(duration: 0.2), value: isAtNow)
+			.onAppear {
+				settledSlotState = slotState
+				lastOpenDate = slotState == .open ? selectedDate : TimelineUtilities.bookableNow()
+			}
+			.onChange(of: selectedDate) { _, newDate in
+				if slotState == .open { lastOpenDate = newDate }
+			}
+			// A fling across a closed night or weekend must not flash the
+			// Closed card — it only appears once the scrubber rests there.
+			.task(id: slotState) {
+				if slotState == .open {
+					settledSlotState = .open
+				} else {
+					try? await Task.sleep(for: .milliseconds(350))
+					guard !Task.isCancelled else { return }
+					settledSlotState = slotState
+				}
+			}
 		}
 	}
 
@@ -297,7 +320,7 @@ struct HomeView: View {
 				VStack(alignment: .leading, spacing: 2) {
 					Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
 						.fontWeight(.semibold)
-					statusLabel(booking.status)
+					statusLabel(booking)
 				}
 				Spacer()
 				Text("\(booking.startTime.toPickerString()) – \(booking.endTime.toPickerString())")
@@ -320,13 +343,15 @@ struct HomeView: View {
 	}
 
 	// Status reads as a colored word under the room name (design: Abu).
-	private func statusLabel(_ status: String) -> some View {
-		let (label, color): (String, Color) = switch status {
+	// One vocabulary across app and admin panel: Booked / Checked-In /
+	// Released / Cancelled — a no-show shows as Released (the outcome).
+	private func statusLabel(_ booking: Reservation) -> some View {
+		let (label, color): (String, Color) = switch booking.status {
+		case "booked" where booking.checkInStatus == "checked_in": ("Checked-In", .green)
 		case "booked": ("Booked", .blue)
-		case "released": ("Released", .orange)
-		case "no_show": ("No-show", .red)
+		case "released", "no_show": ("Released", .orange)
 		case "cancelled": ("Cancelled", .red)
-		default: (status.capitalized, .secondary)
+		default: (booking.status.capitalized, .secondary)
 		}
 		return Text(label)
 			.font(.subheadline)
