@@ -184,8 +184,8 @@ struct VerticalTimelineView: View {
 		var proposedEnd = proposedStart.addingTimeInterval(endTime.timeIntervalSince(startTime))
 		
 		if !isValid(start: proposedStart, end: proposedEnd) {
-			// Propose an hour; when the day is fuller, tighten to 30 and
-			// then 15 minutes.
+			// Propose 45 minutes; when the day is fuller, tighten to 30
+			// and then 15 minutes.
 			if let nextSlot = TimelineUtilities.findNextAvailableSlot(on: selectedDate, duration: AppConfig.Reservation.defaultDuration, reservations: reservations)
 				?? TimelineUtilities.findNextAvailableSlot(on: selectedDate, duration: 30 * 60, reservations: reservations)
 				?? TimelineUtilities.findNextAvailableSlot(on: selectedDate, reservations: reservations) {
