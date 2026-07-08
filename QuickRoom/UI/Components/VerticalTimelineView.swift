@@ -184,7 +184,10 @@ struct VerticalTimelineView: View {
 		var proposedEnd = proposedStart.addingTimeInterval(endTime.timeIntervalSince(startTime))
 		
 		if !isValid(start: proposedStart, end: proposedEnd) {
-			if let nextSlot = TimelineUtilities.findNextAvailableSlot(on: selectedDate, duration: AppConfig.Reservation.minDuration, reservations: reservations) {
+			// Propose a 30-minute slot; if the day only has 15-minute gaps
+			// left, fall back to the minimum.
+			if let nextSlot = TimelineUtilities.findNextAvailableSlot(on: selectedDate, duration: AppConfig.Reservation.defaultDuration, reservations: reservations)
+				?? TimelineUtilities.findNextAvailableSlot(on: selectedDate, reservations: reservations) {
 				proposedStart = nextSlot.start
 				proposedEnd = nextSlot.end
 			}

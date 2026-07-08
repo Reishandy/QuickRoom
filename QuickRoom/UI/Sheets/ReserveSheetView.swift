@@ -18,7 +18,7 @@ struct ReserveSheetView: View {
 	let onBooked: () -> Void
 
 	@State private var startTime: Date = .now
-	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
+	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.defaultDuration)
 	@State private var isProcessing = false
 	@State private var errorMessage: String?
 	@State private var isStartPickerPresented = false

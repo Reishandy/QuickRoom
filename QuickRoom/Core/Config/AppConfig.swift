@@ -17,6 +17,7 @@ enum AppConfig {
 	enum Reservation {
 		static let timeStepMinutes = 15
 		static let minDuration: TimeInterval = 900 // 15 mins
+		static let defaultDuration: TimeInterval = 1800 // opening proposal; 15-min bookings stay allowed
 		static let maxDuration: TimeInterval = 7200 // 2 hours
 	}
 	
