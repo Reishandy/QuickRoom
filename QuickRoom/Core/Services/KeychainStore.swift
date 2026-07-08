@@ -41,7 +41,22 @@ enum KeychainStore {
 		guard let value else { return }
 		var query = baseQuery(for: key)
 		query[kSecValueData as String] = Data(value.utf8)
+		// AfterFirstUnlock: beacon region events wake the app while the phone
+		// is locked; the default (WhenUnlocked) makes the token unreadable
+		// there, so presence POSTs went out with no bearer and 401'd.
+		query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
 		SecItemAdd(query as CFDictionary, nil)
+	}
+
+	/// Rewrites existing items so pre-existing sessions pick up the
+	/// AfterFirstUnlock accessibility. Call while the phone is unlocked
+	/// (app foreground); a locked read returns nil and this no-ops.
+	static func migrateAccessibility() {
+		for key in ["session_token", "current_user", "apple_user_id"] {
+			if let value = string(for: key) {
+				setString(value, for: key)
+			}
+		}
 	}
 
 	private static func baseQuery(for key: String) -> [String: Any] {
