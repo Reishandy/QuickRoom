@@ -17,19 +17,14 @@ struct HomeView: View {
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
 	@Binding var tab: HomeTab
-	let onRoomClick: (String) -> Void
 
 	@State private var isAtNow = true
 	@State private var goToNowPulse = 0
 	@State private var jumpDate: Date? = nil
 	@State private var showDatePicker = false
-
-	// The scrubber's reachable window: today through its lookahead.
-	private var jumpRange: ClosedRange<Date> {
-		let today = Calendar.current.startOfDay(for: .now)
-		let last = Calendar.current.date(byAdding: .day, value: AppConfig.Timeline.lookaheadDays, to: today) ?? today
-		return today...last
-	}
+	@State private var roomsPath: [String] = []
+	@State private var bookingsPath: [String] = []
+	@State private var bookedPulse = 0
 
 	private var availableRooms: [Room] {
 		reservationService.rooms.filter {
@@ -38,6 +33,21 @@ struct HomeView: View {
 			}
 			return false
 		}
+	}
+
+	private enum SlotState { case open, closed, weekend }
+
+	// Mirrors the ruler's regions: Sat/Sun plus Friday night and Monday
+	// pre-dawn read as "Weekend", weekday nights as "Close".
+	private var slotState: SlotState {
+		let calendar = Calendar.current
+		if calendar.isWithinWorkingHours(selectedDate) { return .open }
+		let weekday = calendar.component(.weekday, from: selectedDate)
+		let hour = calendar.component(.hour, from: selectedDate)
+		let isWeekendRegion = weekday == 1 || weekday == 7
+			|| (weekday == 6 && hour >= AppConfig.WorkingHours.end)
+			|| (weekday == 2 && hour < AppConfig.WorkingHours.start)
+		return isWeekendRegion ? .weekend : .closed
 	}
 
 	// Bookings grouped per day, today first, then coming days (design: Abu).
@@ -71,19 +81,30 @@ struct HomeView: View {
 
 	var body: some View {
 		TabView(selection: $tab) {
-			Tab("Free rooms", systemImage: "door.left.hand.open", value: .rooms) {
+			Tab("Available rooms", systemImage: "door.left.hand.open", value: .rooms) {
 				freeRoomsTab
 			}
 			Tab("My bookings", systemImage: "bookmark", value: .bookings) {
 				myBookingsTab
 			}
 		}
+		.sensoryFeedback(.success, trigger: bookedPulse)
+	}
+
+	// Booking opens as a pushed page (design: Abu), not a sheet.
+	private func reservePage(_ roomId: String) -> some View {
+		ReserveSheetView(selectedDate: $selectedDate, roomId: roomId) {
+			bookedPulse += 1
+			roomsPath.removeAll()
+			bookingsPath.removeAll()
+			tab = .bookings
+		}
 	}
 
 	// MARK: - Free rooms
 
 	private var freeRoomsTab: some View {
-		NavigationStack {
+		NavigationStack(path: $roomsPath) {
 			ScrollView {
 				VStack(spacing: 16) {
 					TimelineSliderView(
@@ -94,10 +115,24 @@ struct HomeView: View {
 						jumpDate: $jumpDate
 					)
 					.padding(.vertical, 6)
-					.background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+					.padding(.horizontal, -16) // full-bleed ruler (Abu: full screen width)
 
 					if reservationService.isLoading && reservationService.rooms.isEmpty {
 						loadingCard
+					} else if slotState == .weekend {
+						emptyCard(
+							"Closed for the Weekend",
+							systemImage: "beach.umbrella",
+							description: "The space is closed on weekends. Jump to a weekday to book a room."
+						)
+						.transition(.opacity)
+					} else if slotState == .closed {
+						emptyCard(
+							"Closed at This Time",
+							systemImage: "moon.zzz",
+							description: "Working hours are \(AppConfig.WorkingHours.start):00–\(AppConfig.WorkingHours.end):00. Pick a time during the day."
+						)
+						.transition(.opacity)
 					} else if availableRooms.isEmpty {
 						emptyCard(
 							"No Rooms Available",
@@ -118,39 +153,40 @@ struct HomeView: View {
 				await reservationService.refreshNow()
 			}
 			.background(Color(uiColor: .systemGroupedBackground))
-			.navigationTitle("Free rooms")
+			.navigationTitle("Available rooms")
+			.navigationBarTitleDisplayMode(.inline)
 			.navigationSubtitle(selectedDate.toHomeString())
+			.navigationDestination(for: String.self) { roomId in
+				reservePage(roomId)
+			}
 			.toolbar {
-				ToolbarItemGroup(placement: .topBarTrailing) {
-					Button("Now") {
-						goToNowPulse += 1
+				// Return-to-now lives top-left as a prominent capsule and only
+				// appears once the scrubber has left the current time (design: Abu).
+				if !isAtNow {
+					ToolbarItem(placement: .topBarLeading) {
+						Button("Now") {
+							goToNowPulse += 1
+						}
+						.buttonStyle(.borderedProminent)
 					}
-					.disabled(isAtNow)
+				}
 
+				ToolbarItem(placement: .topBarTrailing) {
 					Button("Jump to date", systemImage: "calendar") {
 						showDatePicker = true
 					}
 					.popover(isPresented: $showDatePicker) {
-						DatePicker(
-							"Jump to date",
-							selection: Binding(
-								get: { selectedDate },
-								set: { day in
-									jumpDate = day
-									showDatePicker = false
-								}
-							),
-							in: jumpRange,
-							displayedComponents: [.date]
-						)
-						.datePickerStyle(.graphical)
-						.frame(width: 320, height: 330)
-						.padding(.horizontal, 8)
+						JumpWeeksView(selectedDate: selectedDate) { day in
+							jumpDate = day
+							showDatePicker = false
+						}
+						.padding(16)
 						.presentationCompactAdaptation(.popover)
 					}
 				}
 			}
 			.animation(.easeInOut(duration: 0.25), value: availableRooms)
+			.animation(.easeInOut(duration: 0.25), value: slotState)
 			.animation(.easeInOut(duration: 0.2), value: isAtNow)
 		}
 	}
@@ -159,7 +195,7 @@ struct HomeView: View {
 		VStack(spacing: 0) {
 			ForEach(availableRooms) { room in
 				Button {
-					onRoomClick(room.id)
+					roomsPath.append(room.id)
 				} label: {
 					HStack(spacing: 12) {
 						roomIcon(room)
@@ -193,7 +229,7 @@ struct HomeView: View {
 	// MARK: - My bookings
 
 	private var myBookingsTab: some View {
-		NavigationStack {
+		NavigationStack(path: $bookingsPath) {
 			ScrollView {
 				VStack(spacing: 16) {
 					if reservationService.isLoading && myBookings.isEmpty {
@@ -217,6 +253,10 @@ struct HomeView: View {
 			}
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("My bookings")
+			.navigationBarTitleDisplayMode(.inline)
+			.navigationDestination(for: String.self) { roomId in
+				reservePage(roomId)
+			}
 			.animation(.easeInOut(duration: 0.25), value: myBookings)
 		}
 	}
@@ -250,24 +290,19 @@ struct HomeView: View {
 	private func bookingRow(_ booking: Reservation) -> some View {
 		Button {
 			selectedDate = booking.startTime
-			onRoomClick(booking.roomId)
+			bookingsPath.append(booking.roomId)
 		} label: {
 			HStack(spacing: 12) {
 				rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
 				VStack(alignment: .leading, spacing: 2) {
 					Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
 						.fontWeight(.semibold)
-					if !booking.title.isEmpty {
-						Text(roomName(booking.roomId))
-							.font(.footnote)
-							.foregroundStyle(.secondary)
-					}
-					Text("\(booking.startTime.toPickerString()) – \(booking.endTime.toPickerString())")
-						.font(.subheadline)
-						.foregroundStyle(.secondary)
+					statusLabel(booking.status)
 				}
 				Spacer()
-				statusBadge(booking.status)
+				Text("\(booking.startTime.toPickerString()) – \(booking.endTime.toPickerString())")
+					.font(.subheadline)
+					.foregroundStyle(.secondary)
 				Image(systemName: "chevron.right")
 					.font(.footnote.weight(.semibold))
 					.foregroundStyle(.tertiary)
@@ -284,20 +319,18 @@ struct HomeView: View {
 		reservationService.rooms.first(where: { $0.id == roomId })?.name ?? roomId
 	}
 
-	private func statusBadge(_ status: String) -> some View {
+	// Status reads as a colored word under the room name (design: Abu).
+	private func statusLabel(_ status: String) -> some View {
 		let (label, color): (String, Color) = switch status {
 		case "booked": ("Booked", .blue)
 		case "released": ("Released", .orange)
 		case "no_show": ("No-show", .red)
-		case "cancelled": ("Cancelled", .secondary)
+		case "cancelled": ("Cancelled", .red)
 		default: (status.capitalized, .secondary)
 		}
 		return Text(label)
-			.font(.caption2.weight(.semibold))
+			.font(.subheadline)
 			.foregroundStyle(color)
-			.padding(.horizontal, 8)
-			.padding(.vertical, 4)
-			.background(color.opacity(0.12), in: Capsule())
 	}
 
 	// Every room gets its own symbol (mentor feedback), all in the app's
@@ -339,6 +372,71 @@ struct HomeView: View {
 	}
 }
 
+// Two calendar weeks (today's and the next), closed days greyed — the month
+// DatePicker can't disable weekends, so the jump popover draws its own grid.
+private struct JumpWeeksView: View {
+	let selectedDate: Date
+	let onPick: (Date) -> Void
+
+	private let calendar = Calendar.current
+
+	private var weeks: [[Date]] {
+		let today = calendar.startOfDay(for: .now)
+		let last = TimelineUtilities.lastSelectableDay()
+		guard let firstWeek = calendar.dateInterval(of: .weekOfYear, for: today) else { return [] }
+		var result: [[Date]] = []
+		var weekStart = firstWeek.start
+		while weekStart <= last {
+			result.append((0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: weekStart) })
+			weekStart = calendar.date(byAdding: .day, value: 7, to: weekStart) ?? last.addingTimeInterval(1)
+		}
+		return result
+	}
+
+	var body: some View {
+		let today = calendar.startOfDay(for: .now)
+		let last = TimelineUtilities.lastSelectableDay()
+
+		VStack(spacing: 10) {
+			HStack(spacing: 0) {
+				ForEach(weeks.first ?? [], id: \.self) { day in
+					Text(day.formatted(.dateTime.weekday(.narrow)))
+						.font(.footnote)
+						.foregroundStyle(.secondary)
+						.frame(maxWidth: .infinity)
+				}
+			}
+
+			ForEach(weeks, id: \.first) { week in
+				HStack(spacing: 0) {
+					ForEach(week, id: \.self) { day in
+						let isClosed = calendar.isDateInWeekend(day) || day < today || day > last
+						let isSelected = calendar.isDate(day, inSameDayAs: selectedDate)
+
+						Button {
+							onPick(day)
+						} label: {
+							Text(day.formatted(.dateTime.day()))
+								.font(.title3)
+								.frame(width: 40, height: 40)
+								.background {
+									if isSelected {
+										Circle().fill(Color.blue)
+									}
+								}
+								.foregroundStyle(isSelected ? .white : isClosed ? Color(uiColor: .tertiaryLabel) : .primary)
+						}
+						.buttonStyle(.plain)
+						.disabled(isClosed)
+						.frame(maxWidth: .infinity)
+					}
+				}
+			}
+		}
+		.frame(width: 308)
+	}
+}
+
 #Preview {
 	@Previewable @State var selectedDate: Date = .now
 	@Previewable @State var selectedIndex: Int? = nil
@@ -354,8 +452,7 @@ struct HomeView: View {
 	return HomeView(
 		selectedDate: $selectedDate,
 		selectedIndex: $selectedIndex,
-		tab: $tab,
-		onRoomClick: { _ in }
+		tab: $tab
 	)
 	.environment(service)
 }

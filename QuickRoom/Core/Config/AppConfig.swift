@@ -39,8 +39,7 @@ enum AppConfig {
 		// One tick per bookable slot, day-separated so it doesn't read
 		// like a ruler.
 		static let tickStepMinutes = 15
-		static let tickWidth: CGFloat = 6 // 4 pt clear gap between 2 pt lines (Abu)
+		static let tickWidth: CGFloat = 8 // 6 pt clear gap between 2 pt lines (Abu)
 		static let lookbehindDays = 2
-		static let lookaheadDays = 14
 	}
 }

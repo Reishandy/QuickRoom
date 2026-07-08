@@ -32,6 +32,8 @@ struct TimelineSliderView: View {
 	@State private var programmaticTarget: Int? = nil
 	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+	/// Extra invisible grab area above and below the ruler.
+	private static let touchSlop: CGFloat = 20
 	
 	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, isAtNow: Binding<Bool> = .constant(true), goToNowPulse: Int = 0, jumpDate: Binding<Date?> = .constant(nil)) {
 		self._selectedDate = selectedDate
@@ -58,7 +60,11 @@ struct TimelineSliderView: View {
 						}
 					}
 					.scrollTargetLayout()
+					.padding(.top, 18 + Self.touchSlop) // clear the floating selection triangle
 				}
+				// Taller gesture surface, same visuals — easier to grab the ruler.
+				.frame(height: 60 + 2 * Self.touchSlop)
+				.padding(.vertical, -Self.touchSlop)
 				.scrollPosition($scrollPosition)
 				.scrollTargetBehavior(.viewAligned(limitBehavior: .never)) // full-momentum flings, still snaps to a tick
 				.safeAreaPadding(.horizontal, centerPadding)
@@ -98,26 +104,18 @@ struct TimelineSliderView: View {
 						selectedDate = ticks[newIndex].date
 					}
 					
-					if scrollPosition.viewID as? Int != newIndex {
+					if programmaticTarget == nil, scrollPosition.viewID as? Int != newIndex {
 						scrollPosition.scrollTo(id: newIndex)
 					}
 				}
 				
-				ZStack {
-					Image(systemName: "triangle.fill")
-						.font(.callout)
-						.foregroundStyle(.ultraThinMaterial)
-						.scaleEffect(1.3)
-						.offset(y: -1)
-					
-					Image(systemName: "triangle.fill")
-						.font(.callout)
-						.foregroundStyle(selectedIndex == nowIndex ? Color.blue : Color(uiColor: .label))
-				}
-				.rotationEffect(.degrees(180))
+				Image(systemName: "triangle.fill")
+					.font(.callout)
+					.foregroundStyle(selectedIndex == nowIndex ? Color.blue : Color(uiColor: .label))
+					.rotationEffect(.degrees(180))
 			}
 		}
-		.frame(height: 70)
+		.frame(height: 60)
 		.onAppear {
 			updateCurrentTimeConstraints()
 			
@@ -154,8 +152,10 @@ struct TimelineSliderView: View {
 	
 	private func jump(to index: Int) {
 		programmaticTarget = index
+		selectedIndex = index
+		// Glide the ruler to the target instead of teleporting.
 		withAnimation(.bouncy) {
-			selectedIndex = index
+			scrollPosition.scrollTo(id: index)
 		}
 		// If leftover momentum swallowed the animated jump, settle it hard.
 		Task {
@@ -186,41 +186,37 @@ struct TimelineTickView: View, Equatable {
 	let tick: TimelineTick
 	let nowIndex: Int
 	let tickWidth: CGFloat
-	
-	var body: some View {
-		let isPast = tick.id < nowIndex
 
-		// Day starts are the prominent separators (mentor feedback: the tall
-		// lines must divide days, not hours); hours are medium, half-hours
-		// faint — otherwise it reads like a ruler.
-		let baseColor: Color = tick.isDayStart ? Color(uiColor: .label)
-			: tick.type == .normalHour ? Color(uiColor: .tertiaryLabel)
-			: Color(uiColor: .quaternaryLabel)
+	var body: some View {
+		// Uniform ruler (design: Abu): every tick the same size — hours and the
+		// day start read by color (solid vs gray), never by height. Past time
+		// fades out.
+		let isPast = tick.id < nowIndex
 		let opacity: Double = (isPast || tick.type == .offHour || tick.type == .weekend) ? 0.3 : 1.0
-		let tickColor = baseColor.opacity(opacity)
-		let height: CGFloat = tick.isDayStart ? 36 : tick.type == .normalHour ? 24 : 14
+		let tickColor: Color = (tick.isDayStart || tick.type == .normalHour
+			? Color(uiColor: .label)
+			: Color(uiColor: .tertiaryLabel)).opacity(opacity)
 
 		VStack(spacing: 8) {
 			Capsule()
 				.fill(tickColor)
-				.frame(width: tick.isDayStart ? 3 : 2, height: height)
-				.padding(.top, tick.isDayStart ? 4 : 4 + (36 - height) / 2)
+				.frame(width: 2, height: 16)
 
 			if tick.isLabelTick {
-				let labelText = tick.type == .weekend ? "Weekend" : "Off"
+				let labelText = tick.type == .weekend ? "Weekend" : "Close"
 				Text(labelText)
 					.font(.caption)
-					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
+					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(opacity))
 					.fixedSize()
 			} else if tick.isDayStart {
 				Text(tick.date.toDayLabel())
 					.font(.caption.weight(.semibold))
-					.foregroundStyle(Color(uiColor: .label).opacity(isPast ? 0.3 : 1.0))
+					.foregroundStyle(Color(uiColor: .label).opacity(opacity))
 					.fixedSize()
 			} else if tick.type == .normalHour {
 				Text("\(tick.hour)")
 					.font(.caption)
-					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
+					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(opacity))
 					.fixedSize()
 			} else {
 				Spacer(minLength: 0)

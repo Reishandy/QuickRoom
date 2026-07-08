@@ -196,7 +196,7 @@ struct VerticalTimelineView: View {
 	
 	private func isValid(start: Date, end: Date) -> Bool {
 		let now = Date()
-		if isToday && start < now { return false }
+		if isToday && start < TimelineUtilities.bookableNow(now) { return false }
 		
 		// Still forces the block inside working hours, even though 24 hours are shown
 		let limitStart = TimelineUtilities.workingHoursStart(for: selectedDate)
