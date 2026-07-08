@@ -11,4 +11,5 @@ struct Room: Identifiable, Hashable {
 	let id: String
 	let name: String
 	let capacity: Int
+	var isZoomRoom: Bool = false
 }

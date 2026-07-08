@@ -333,19 +333,10 @@ struct HomeView: View {
 			.foregroundStyle(color)
 	}
 
-	// Every room gets its own symbol (mentor feedback), all in the app's
-	// single blue so the list stays calm; assigned from a stable hash of the
-	// workspace id so it never changes between launches and new rooms need
-	// no app update.
-	private static let iconSymbols = [
-		"mountain.2.fill", "water.waves", "leaf.fill", "sun.max.fill",
-		"moon.stars.fill", "tree.fill", "flame.fill", "tornado",
-		"bird.fill", "fish.fill",
-	]
-
+	// Icon states what's in the room: a TV for Zoom rooms, SharePlay for the
+	// plain ones (design: Abu).
 	private func roomIcon(_ room: Room) -> some View {
-		let stableHash = room.id.unicodeScalars.reduce(0) { $0 &* 31 &+ Int($1.value) }
-		return rowIcon(Self.iconSymbols[abs(stableHash) % Self.iconSymbols.count], tint: Color(uiColor: .systemBlue))
+		rowIcon(room.isZoomRoom ? "tv" : "shareplay", tint: Color(uiColor: .systemBlue))
 	}
 
 	private func rowIcon(_ systemName: String, tint: Color) -> some View {

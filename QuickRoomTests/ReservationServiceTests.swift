@@ -21,7 +21,7 @@ final class ReservationServiceTests: XCTestCase {
 		{"rooms":[{"room_id":"room-ws-agung","zoom_workspace_id":"ws-agung","name":"Agung","floor":"","capacity":8,"has_tv":true,"is_zoom_room":true}]}
 		""".utf8)).rooms
 		let rooms = ReservationService.mapRooms(server)
-		XCTAssertEqual(rooms, [Room(id: "ws-agung", name: "Agung", capacity: 8)])
+		XCTAssertEqual(rooms, [Room(id: "ws-agung", name: "Agung", capacity: 8, isZoomRoom: true)])
 	}
 
 	func testMapReservationsFiltersToBookedAndMarksMine() {

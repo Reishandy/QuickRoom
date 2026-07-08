@@ -104,7 +104,7 @@ class ReservationService {
 	}
 
 	static func mapRooms(_ dtos: [RoomDTO]) -> [Room] {
-		dtos.map { Room(id: $0.zoomWorkspaceId, name: $0.name, capacity: $0.capacity) }
+		dtos.map { Room(id: $0.zoomWorkspaceId, name: $0.name, capacity: $0.capacity, isZoomRoom: $0.isZoomRoom) }
 	}
 
 	/// Only `booked` reservations block a room; no-shows, releases and
