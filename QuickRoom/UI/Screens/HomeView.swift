@@ -198,7 +198,7 @@ struct HomeView: View {
 					roomsPath.append(room.id)
 				} label: {
 					HStack(spacing: 12) {
-						roomIcon(room)
+						roomIcon(room.id)
 						VStack(alignment: .leading, spacing: 2) {
 							Text(room.name)
 								.fontWeight(.semibold)
@@ -293,7 +293,7 @@ struct HomeView: View {
 			bookingsPath.append(booking.roomId)
 		} label: {
 			HStack(spacing: 12) {
-				rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
+				roomIcon(booking.roomId)
 				VStack(alignment: .leading, spacing: 2) {
 					Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
 						.fontWeight(.semibold)
@@ -335,8 +335,9 @@ struct HomeView: View {
 
 	// Icon states what's in the room: a TV for Zoom rooms, SharePlay for the
 	// plain ones (design: Abu).
-	private func roomIcon(_ room: Room) -> some View {
-		rowIcon(room.isZoomRoom ? "tv" : "shareplay", tint: Color(uiColor: .systemBlue))
+	private func roomIcon(_ roomId: String) -> some View {
+		let isZoom = reservationService.rooms.first(where: { $0.id == roomId })?.isZoomRoom ?? false
+		return rowIcon(isZoom ? "tv" : "shareplay", tint: Color(uiColor: .systemBlue))
 	}
 
 	private func rowIcon(_ systemName: String, tint: Color) -> some View {
