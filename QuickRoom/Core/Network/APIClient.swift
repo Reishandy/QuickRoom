@@ -52,6 +52,10 @@ final class APIClient {
 		try await send("POST", path, body: Optional<AppleAuthRequest>.none)
 	}
 
+	func patch<T: Decodable, B: Encodable>(_ path: String, body: B) async throws -> T {
+		try await send("PATCH", path, body: body)
+	}
+
 	private func send<T: Decodable, B: Encodable>(_ method: String, _ path: String, body: B?) async throws -> T {
 		var request = URLRequest(url: baseURL.appending(path: path))
 		request.httpMethod = method

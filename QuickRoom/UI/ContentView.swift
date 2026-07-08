@@ -13,18 +13,18 @@ struct ContentView: View {
 	@Environment(NotificationPermissionService.self) private var notificationPermissionService
 	@Environment(ReservationService.self) private var reservationService
 	@Environment(AuthService.self) private var authService
-	
+
 	let isPreview: Bool
-	
+
 	@State private var isPermissionSheetShown = false
 	@State private var selectedDate: Date = .now
 	@State private var selectedIndex: Int? = nil
-	@State private var selectedRoomId: String? = nil
-	
+	@State private var homeTab: HomeTab = .rooms
+
 	private var shouldShowPermissionSheet: Bool {
 		!locationPermissionService.isFullyAuthorized || !notificationPermissionService.isFullyAuthorized
 	}
-	
+
 	// TODO: Info.plist wording
 	// TODO: Design tweak (color, spacing, etc)
 	// TODO: Loading state for UI
@@ -70,33 +70,14 @@ struct ContentView: View {
 			try? await reservationService.fetchReservationsOnLoad()
 		}
 	}
-	
+
 	@ViewBuilder
 	private var baseView: some View {
 		HomeView(
 			selectedDate: $selectedDate,
 			selectedIndex: $selectedIndex,
-			onRoomClick: { roomId in selectedRoomId = roomId }
+			tab: $homeTab
 		)
-		.sheet(isPresented: Binding(
-			get: { selectedRoomId != nil },
-			set: { isPresented in
-				if !isPresented { selectedRoomId = nil }
-			}
-		)) {
-			if let selectedRoom = selectedRoomId {
-				ReserveSheetView(
-					selectedDate: $selectedDate,
-					roomId: selectedRoom,
-					onDismissClick: {
-						selectedRoomId = nil
-					}
-				)
-				.presentationDetents([.large])
-				.interactiveDismissDisabled(true)
-				.presentationDragIndicator(.hidden)
-			}
-		}
 		.task {
 			if !isPreview {
 				await notificationPermissionService.checkStatus()

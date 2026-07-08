@@ -15,8 +15,8 @@ struct HorizontalDatePickerView: View {
 	private var dates: [Date] {
 		let today = calendar.startOfDay(for: .now)
 		let startOffset = -AppConfig.Timeline.lookbehindDays
-		let endOffset = AppConfig.Timeline.lookaheadDays
-		
+		let endOffset = calendar.dateComponents([.day], from: today, to: TimelineUtilities.lastSelectableDay()).day ?? 0
+
 		return (startOffset...endOffset).compactMap { dayOffset in
 			calendar.date(byAdding: .day, value: dayOffset, to: today)
 		}

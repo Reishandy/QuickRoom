@@ -38,8 +38,17 @@ class ReservationService {
 		try await refresh()
 	}
 
-	func reserve(roomId: String, startTime: Date, endTime: Date) async throws {
-		let _: ReservationDTO = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: roomId, startTime: startTime, endTime: endTime))
+	func refreshNow() async {
+		try? await refresh()
+	}
+
+	func reserve(roomId: String, title: String?, startTime: Date, endTime: Date) async throws {
+		let _: ReservationDTO = try await client.post("/reservations", body: CreateReservationRequest(workspaceId: roomId, title: title, startTime: startTime, endTime: endTime))
+		try await refresh()
+	}
+
+	func renameReservation(reservationId: String, title: String) async throws {
+		let _: ReservationDTO = try await client.patch("/reservations/\(reservationId)", body: UpdateReservationRequest(title: title))
 		try await refresh()
 	}
 
@@ -87,6 +96,7 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: true,
 				status: dto.status,
+				title: dto.title,
 				startTime: dto.startTime,
 				endTime: dto.endTime
 			)
@@ -106,6 +116,7 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: myUserId != nil && dto.bookedByUserId == myUserId,
 				status: dto.status,
+				title: dto.title,
 				startTime: dto.startTime,
 				endTime: dto.endTime
 			)

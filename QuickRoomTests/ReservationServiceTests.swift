@@ -12,7 +12,7 @@ final class ReservationServiceTests: XCTestCase {
 	private func makeReservationDTO(id: String = "r1", status: String = "booked", bookedBy: String? = nil) -> ReservationDTO {
 		let bookedByFragment = bookedBy.map { #","booked_by_user_id":"\#($0)""# } ?? ""
 		return try! APIClient.decoder.decode(ReservationDTO.self, from: Data("""
-		{"reservation_id":"\(id)","room_id":"room-ws-ubud","zoom_workspace_id":"ws-ubud","user_id":"","user_email":"e","start_time":"2026-07-05T07:00:00Z","end_time":"2026-07-05T08:00:00Z","status":"\(status)","check_in_status":"not_checked_in","source":"app"\(bookedByFragment)}
+		{"reservation_id":"\(id)","room_id":"room-ws-ubud","zoom_workspace_id":"ws-ubud","title":"Standup","user_id":"","user_email":"e","start_time":"2026-07-05T07:00:00Z","end_time":"2026-07-05T08:00:00Z","status":"\(status)","check_in_status":"not_checked_in","source":"app"\(bookedByFragment)}
 		""".utf8))
 	}
 

@@ -13,4 +13,5 @@ struct TimelineTick: Identifiable, Hashable {
 	let hour: Int
 	let type: TickType
 	var isLabelTick: Bool = false
+	var isDayStart: Bool = false
 }

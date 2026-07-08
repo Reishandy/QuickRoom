@@ -28,6 +28,7 @@ struct ReservationDTO: Decodable {
 	let reservationId: String
 	let roomId: String
 	let zoomWorkspaceId: String
+	let title: String
 	let userId: String
 	let userEmail: String
 	let startTime: Date
@@ -70,8 +71,13 @@ struct StatusResponse: Decodable {
 
 struct CreateReservationRequest: Encodable {
 	let workspaceId: String
+	let title: String?
 	let startTime: Date
 	let endTime: Date
+}
+
+struct UpdateReservationRequest: Encodable {
+	let title: String?
 }
 
 struct AppleAuthRequest: Encodable {

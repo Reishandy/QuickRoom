@@ -11,20 +11,37 @@ import Combine
 struct TimelineSliderView: View {
 	@Binding var selectedDate: Date
 	@Binding var selectedIndex: Int?
-	
+	/// True while the scrubber sits on the current time; the parent shows its
+	/// own return-to-now control (title-row button, per mentor feedback).
+	@Binding var isAtNow: Bool
+	/// Incremented by the parent to snap the scrubber back to now.
+	let goToNowPulse: Int
+	/// Set by the parent to jump to a day (long-distance navigation — the
+	/// ruler alone is too long to fling across several days). Keeps the
+	/// current time-of-day when the target day has it; cleared after use.
+	@Binding var jumpDate: Date?
+
 	@State private var scrollPosition = ScrollPosition(idType: Int.self)
 	
 	@State private var ticks: [TimelineTick]
 	@State private var minAllowedIndex: Int = 0
 	@State private var boundaryHitTrigger: Int = 0
 	@State private var nowIndex: Int = 0
+	/// Set while a programmatic jump (Now / date picker) is in flight so the
+	/// still-decelerating scroll can't stomp the selection mid-jump.
+	@State private var programmaticTarget: Int? = nil
 	
 	private let timer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+	/// Extra invisible grab area above and below the ruler.
+	private static let touchSlop: CGFloat = 20
 	
-	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>) {
+	init(selectedDate: Binding<Date>, selectedIndex: Binding<Int?>, isAtNow: Binding<Bool> = .constant(true), goToNowPulse: Int = 0, jumpDate: Binding<Date?> = .constant(nil)) {
 		self._selectedDate = selectedDate
 		self._selectedIndex = selectedIndex
-		
+		self._isAtNow = isAtNow
+		self.goToNowPulse = goToNowPulse
+		self._jumpDate = jumpDate
+
 		let anchor = Calendar.current.startOfDay(for: .now)
 		self._ticks = State(initialValue: TimelineUtilities.generateTicks(anchorDate: anchor))
 	}
@@ -43,9 +60,13 @@ struct TimelineSliderView: View {
 						}
 					}
 					.scrollTargetLayout()
+					.padding(.top, 18 + Self.touchSlop) // clear the floating selection triangle
 				}
+				// Taller gesture surface, same visuals — easier to grab the ruler.
+				.frame(height: 60 + 2 * Self.touchSlop)
+				.padding(.vertical, -Self.touchSlop)
 				.scrollPosition($scrollPosition)
-				.scrollTargetBehavior(.viewAligned)
+				.scrollTargetBehavior(.viewAligned(limitBehavior: .never)) // full-momentum flings, still snaps to a tick
 				.safeAreaPadding(.horizontal, centerPadding)
 				.mask {
 					LinearGradient(
@@ -60,6 +81,12 @@ struct TimelineSliderView: View {
 					)
 				}
 				.onChange(of: scrollPosition) { _, newPosition in
+					if let target = programmaticTarget {
+						if newPosition.viewID as? Int == target {
+							programmaticTarget = nil
+						}
+						return
+					}
 					if let newIndex = newPosition.viewID as? Int, selectedIndex != newIndex {
 						selectedIndex = newIndex
 					}
@@ -77,49 +104,18 @@ struct TimelineSliderView: View {
 						selectedDate = ticks[newIndex].date
 					}
 					
-					if scrollPosition.viewID as? Int != newIndex {
+					if programmaticTarget == nil, scrollPosition.viewID as? Int != newIndex {
 						scrollPosition.scrollTo(id: newIndex)
 					}
 				}
 				
-				ZStack {
-					Image(systemName: "triangle.fill")
-						.font(.callout)
-						.foregroundStyle(.ultraThinMaterial)
-						.scaleEffect(1.3)
-						.offset(y: -1)
-					
-					Image(systemName: "triangle.fill")
-						.font(.callout)
-						.foregroundStyle(selectedIndex == nowIndex ? Color.blue : Color(uiColor: .label))
-				}
-				.rotationEffect(.degrees(180))
-				
-				if selectedIndex != nowIndex {
-					HStack(alignment: .center) {
-						Button {
-							withAnimation(.bouncy) {
-								selectedIndex = nowIndex
-							}
-						} label: {
-							Image(systemName: "arrow.backward.circle.fill")
-								.font(.title)
-								.foregroundStyle(Color(UIColor.systemBlue))
-								.frame(width: 60, height: 60)
-								.background(.thinMaterial, in: Circle())
-						}
-						.buttonStyle(.plain)
-						.padding(.leading, 12)
-						.padding(.top, 4)
-						
-						Spacer()
-					}
-					.transition(.opacity.combined(with: .scale(scale: 0.9)))
-				}
+				Image(systemName: "triangle.fill")
+					.font(.callout)
+					.foregroundStyle(selectedIndex == nowIndex ? Color.blue : Color(uiColor: .label))
+					.rotationEffect(.degrees(180))
 			}
-			.animation(.default, value: selectedIndex != nowIndex)
 		}
-		.frame(height: 70)
+		.frame(height: 60)
 		.onAppear {
 			updateCurrentTimeConstraints()
 			
@@ -134,10 +130,44 @@ struct TimelineSliderView: View {
 		.onReceive(timer) { _ in
 			updateCurrentTimeConstraints()
 		}
+		.onChange(of: selectedIndex) { _, newIndex in
+			isAtNow = newIndex == nowIndex
+		}
+		.onChange(of: goToNowPulse) { _, _ in
+			jump(to: nowIndex)
+		}
+		.onChange(of: jumpDate) { _, target in
+			guard let target else { return }
+			jumpDate = nil
+			let calendar = Calendar.current
+			let wanted = TimelineUtilities.updateDate(selectedDate, toMatchDayOf: target)
+			let idx = ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) && $0.date >= wanted })
+				?? ticks.firstIndex(where: { calendar.isDate($0.date, inSameDayAs: target) })
+			guard let found = idx else { return }
+			jump(to: max(found, minAllowedIndex))
+		}
 		.sensoryFeedback(.selection, trigger: selectedIndex)
 		.sensoryFeedback(.error, trigger: boundaryHitTrigger)
 	}
 	
+	private func jump(to index: Int) {
+		programmaticTarget = index
+		selectedIndex = index
+		// Glide the ruler to the target instead of teleporting.
+		withAnimation(.bouncy) {
+			scrollPosition.scrollTo(id: index)
+		}
+		// If leftover momentum swallowed the animated jump, settle it hard.
+		Task {
+			try? await Task.sleep(for: .milliseconds(700))
+			if programmaticTarget == index {
+				programmaticTarget = nil
+				selectedIndex = index
+				scrollPosition.scrollTo(id: index)
+			}
+		}
+	}
+
 	private func updateCurrentTimeConstraints() {
 		let now = Date.now
 		
@@ -156,29 +186,37 @@ struct TimelineTickView: View, Equatable {
 	let tick: TimelineTick
 	let nowIndex: Int
 	let tickWidth: CGFloat
-	
+
 	var body: some View {
+		// Uniform ruler (design: Abu): every tick the same size — hours and the
+		// day start read by color (solid vs gray), never by height. Past time
+		// fades out.
 		let isPast = tick.id < nowIndex
-		
-		let isMajorTick = (tick.type == .normalHour)
-		let baseColor: Color = isMajorTick ? Color(uiColor: .label) : Color(uiColor: .quaternaryLabel)
 		let opacity: Double = (isPast || tick.type == .offHour || tick.type == .weekend) ? 0.3 : 1.0
-		let tickColor = baseColor.opacity(opacity)
-		
+		let tickColor: Color = (tick.isDayStart || tick.type == .normalHour
+			? Color(uiColor: .label)
+			: Color(uiColor: .tertiaryLabel)).opacity(opacity)
+
 		VStack(spacing: 8) {
 			Capsule()
 				.fill(tickColor)
-				.frame(width: 2.5, height: 32)
-				.padding(.top, 8)
-			
+				.frame(width: 2, height: 16)
+
 			if tick.isLabelTick {
-				let labelText = tick.type == .weekend ? "Weekend" : "Off"
+				let labelText = tick.type == .weekend ? "Weekend" : "Close"
 				Text(labelText)
-					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
+					.font(.caption)
+					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(opacity))
+					.fixedSize()
+			} else if tick.isDayStart {
+				Text(tick.date.toDayLabel())
+					.font(.caption.weight(.semibold))
+					.foregroundStyle(Color(uiColor: .label).opacity(opacity))
 					.fixedSize()
 			} else if tick.type == .normalHour {
 				Text("\(tick.hour)")
-					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(isPast ? 0.3 : 1.0))
+					.font(.caption)
+					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(opacity))
 					.fixedSize()
 			} else {
 				Spacer(minLength: 0)

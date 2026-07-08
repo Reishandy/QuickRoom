@@ -8,11 +8,23 @@
 import Foundation
 
 struct TimelineUtilities {
+	/// Last bookable day — Friday of next week. The scrubber, the booking
+	/// sheet's day strip and the jump calendar all end there ("upcoming two
+	/// weeks", weekends being closed anyway).
+	static func lastSelectableDay(from date: Date = .now) -> Date {
+		let calendar = Calendar.current
+		let day = calendar.startOfDay(for: date)
+		let weekday = calendar.component(.weekday, from: day) // Sun=1 ... Fri=6
+		let daysToFriday = (6 - weekday + 7) % 7
+		return calendar.date(byAdding: .day, value: daysToFriday + 7, to: day) ?? day
+	}
+
 	static func generateTicks(anchorDate: Date) -> [TimelineTick] {
 		var generatedTicks: [TimelineTick] = []
-		
+
 		let startDate = Calendar.current.date(byAdding: .day, value: -AppConfig.Timeline.lookbehindDays, to: anchorDate) ?? anchorDate
-		let endDate = Calendar.current.date(byAdding: .day, value: AppConfig.Timeline.lookaheadDays, to: anchorDate) ?? anchorDate
+		// Ruler ends with next Friday's closing tick — no trailing weekend.
+		let endDate = workingHoursEnd(for: lastSelectableDay(from: anchorDate))
 		
 		var currentDate = startDate
 		var id = 0
@@ -47,7 +59,7 @@ struct TimelineUtilities {
 				if isExactWorkEnd {
 					incrementMinutes = (weekday == 6) ? 180 : 60
 				} else {
-					incrementMinutes = AppConfig.Reservation.timeStepMinutes
+					incrementMinutes = AppConfig.Timeline.tickStepMinutes
 				}
 			} else if isWeekendOffTime {
 				tickType = .weekend
@@ -57,10 +69,15 @@ struct TimelineUtilities {
 				incrementMinutes = 60
 			} else {
 				tickType = .normalMinute
-				incrementMinutes = AppConfig.Reservation.timeStepMinutes
+				incrementMinutes = AppConfig.Timeline.tickStepMinutes
 			}
 			
-			generatedTicks.append(TimelineTick(id: id, date: currentDate, hour: hour, type: tickType))
+			var tick = TimelineTick(id: id, date: currentDate, hour: hour, type: tickType)
+			// Day boundaries are the scrubber's real separators (mentor
+			// feedback: separate days, not hours) — each weekday's
+			// work-start tick carries the day label.
+			tick.isDayStart = isExactWorkStart
+			generatedTicks.append(tick)
 			id += 1
 			
 			var nextDate = calendar.date(byAdding: .minute, value: incrementMinutes, to: currentDate)!
@@ -97,7 +114,15 @@ struct TimelineUtilities {
 	}
 	
 	// MARK: - For VerticalTimelineView
-	
+
+	/// The current minute with seconds dropped — the earliest allowed start
+	/// when booking "from now" (a room free at 15:12 books at 15:12, not 15:15).
+	static func bookableNow(_ now: Date = .now) -> Date {
+		let calendar = Calendar.current
+		let components = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: now)
+		return calendar.date(from: components) ?? now
+	}
+
 	/// Snaps a given date to the nearest 15-minute interval
 	static func snapToTimeStep(_ date: Date) -> Date {
 		let calendar = Calendar.current
@@ -167,8 +192,8 @@ struct TimelineUtilities {
 		
 		if !isToday && date < now { return nil }
 		
-		var currentStart = snapToTimeStep(isToday ? max(now, workingStart) : workingStart)
-		if currentStart < now { currentStart = currentStart.addingTimeInterval(AppConfig.Reservation.minDuration) }
+		// Today's first candidate is "now" itself, not the next grid slot.
+		var currentStart = isToday ? max(bookableNow(now), workingStart) : snapToTimeStep(workingStart)
 		
 		while currentStart.addingTimeInterval(duration) <= workingEnd {
 			let currentEnd = currentStart.addingTimeInterval(duration)
@@ -207,16 +232,20 @@ struct TimelineUtilities {
 	) -> (start: Date, end: Date) {
 		var start = snapToTimeStep(proposedStart)
 		var end = snapToTimeStep(proposedEnd)
-		
+
 		let now = Date()
 		let isToday = Calendar.current.isDate(selectedDate, inSameDayAs: now)
 		let limitStart = workingHoursStart(for: selectedDate)
 		let limitEnd = workingHoursEnd(for: selectedDate)
-		
+
+		// A booking may start at the current minute rather than the next grid
+		// slot ("book it from now") — clamping to now is the only way an
+		// off-grid start can appear.
 		var minValidStart = limitStart
-		if isToday && now > limitStart {
-			let snappedNow = snapToTimeStep(now)
-			minValidStart = snappedNow < now ? snappedNow.addingTimeInterval(TimeInterval(AppConfig.Reservation.timeStepMinutes * 60)) : snappedNow
+		if isToday {
+			let nowFloor = bookableNow(now)
+			if nowFloor > limitStart { minValidStart = nowFloor }
+			if proposedStart == nowFloor { start = nowFloor }
 		}
 		
 		if start < minValidStart {
