@@ -22,8 +22,7 @@ struct HomeView: View {
 	@State private var goToNowPulse = 0
 	@State private var jumpDate: Date? = nil
 	@State private var showDatePicker = false
-	@State private var roomsPath: [String] = []
-	@State private var bookingsPath: [String] = []
+	@State private var selectedRoomId: String? = nil
 	@State private var bookedPulse = 0
 
 	private var availableRooms: [Room] {
@@ -89,22 +88,29 @@ struct HomeView: View {
 			}
 		}
 		.sensoryFeedback(.success, trigger: bookedPulse)
-	}
-
-	// Booking opens as a pushed page (design: Abu), not a sheet.
-	private func reservePage(_ roomId: String) -> some View {
-		ReserveSheetView(selectedDate: $selectedDate, roomId: roomId) {
-			bookedPulse += 1
-			roomsPath.removeAll()
-			bookingsPath.removeAll()
-			tab = .bookings
+		.sheet(isPresented: Binding(
+			get: { selectedRoomId != nil },
+			set: { isPresented in
+				if !isPresented { selectedRoomId = nil }
+			}
+		)) {
+			if let roomId = selectedRoomId {
+				ReserveSheetView(selectedDate: $selectedDate, roomId: roomId) {
+					bookedPulse += 1
+					selectedRoomId = nil
+					tab = .bookings
+				}
+				.presentationDetents([.large])
+				.interactiveDismissDisabled(true)
+				.presentationDragIndicator(.hidden)
+			}
 		}
 	}
 
 	// MARK: - Free rooms
 
 	private var freeRoomsTab: some View {
-		NavigationStack(path: $roomsPath) {
+		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
 					TimelineSliderView(
@@ -156,9 +162,6 @@ struct HomeView: View {
 			.navigationTitle("Available rooms")
 			.navigationBarTitleDisplayMode(.inline)
 			.navigationSubtitle(selectedDate.toHomeString())
-			.navigationDestination(for: String.self) { roomId in
-				reservePage(roomId)
-			}
 			.toolbar {
 				// Return-to-now lives top-left as a prominent capsule and only
 				// appears once the scrubber has left the current time (design: Abu).
@@ -195,7 +198,7 @@ struct HomeView: View {
 		VStack(spacing: 0) {
 			ForEach(availableRooms) { room in
 				Button {
-					roomsPath.append(room.id)
+					selectedRoomId = room.id
 				} label: {
 					HStack(spacing: 12) {
 						roomIcon(room.id)
@@ -229,7 +232,7 @@ struct HomeView: View {
 	// MARK: - My bookings
 
 	private var myBookingsTab: some View {
-		NavigationStack(path: $bookingsPath) {
+		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
 					if reservationService.isLoading && myBookings.isEmpty {
@@ -254,9 +257,6 @@ struct HomeView: View {
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("My bookings")
 			.navigationBarTitleDisplayMode(.inline)
-			.navigationDestination(for: String.self) { roomId in
-				reservePage(roomId)
-			}
 			.animation(.easeInOut(duration: 0.25), value: myBookings)
 		}
 	}
@@ -290,7 +290,7 @@ struct HomeView: View {
 	private func bookingRow(_ booking: Reservation) -> some View {
 		Button {
 			selectedDate = booking.startTime
-			bookingsPath.append(booking.roomId)
+			selectedRoomId = booking.roomId
 		} label: {
 			HStack(spacing: 12) {
 				roomIcon(booking.roomId)
