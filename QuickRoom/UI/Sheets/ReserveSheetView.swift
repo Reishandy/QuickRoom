@@ -8,10 +8,9 @@
 import SwiftUI
 import AuthenticationServices
 
-// Pushed as a page inside the tab's NavigationStack (design: Abu) — the
-// system back chevron replaces the old sheet dismiss button.
 struct ReserveSheetView: View {
 	@Environment(ReservationService.self) private var reservationService
+	@Environment(\.dismiss) private var dismiss
 
 	@Binding var selectedDate: Date
 
@@ -19,7 +18,7 @@ struct ReserveSheetView: View {
 	let onBooked: () -> Void
 
 	@State private var startTime: Date = .now
-	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.minDuration)
+	@State private var endTime: Date = .now.addingTimeInterval(AppConfig.Reservation.defaultDuration)
 	@State private var isProcessing = false
 	@State private var errorMessage: String?
 	@State private var isStartPickerPresented = false
@@ -41,22 +40,29 @@ struct ReserveSheetView: View {
 	}
 
 	var body: some View {
-		VStack {
-			HorizontalDatePickerView(selectedDate: $selectedDate)
-				.frame(maxHeight: 80)
+		NavigationStack {
+			VStack {
+				HorizontalDatePickerView(selectedDate: $selectedDate)
+					.frame(maxHeight: 80)
 
-			VerticalTimelineView(
-				reservations: dailyReservations,
-				selectedDate: $selectedDate,
-				startTime: $startTime,
-				endTime: $endTime,
-				hasExistingReservation: hasExistingReservation
-			)
-		}
-		.navigationTitle(reservationService.rooms.first(where: { $0.id == roomId })?.name ?? roomId)
+				VerticalTimelineView(
+					reservations: dailyReservations,
+					selectedDate: $selectedDate,
+					startTime: $startTime,
+					endTime: $endTime,
+					hasExistingReservation: hasExistingReservation
+				)
+			}
+			.navigationTitle(reservationService.rooms.first(where: { $0.id == roomId })?.name ?? roomId)
 		.navigationSubtitle(selectedDate.toReservationString())
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {
+			ToolbarItem(placement: .topBarLeading) {
+				Button("Back", systemImage: "chevron.left") {
+					dismiss()
+				}
+			}
+
 			ToolbarItem(placement: .topBarTrailing) {
 				if myReservation != nil {
 					Button {
@@ -170,6 +176,7 @@ struct ReserveSheetView: View {
 		.task {
 			try? await reservationService.fetchReservationsOnLoad()
 		}
+		}
 	}
 
 	private func book() {
@@ -187,13 +194,11 @@ struct ReserveSheetView: View {
 }
 
 #Preview {
-	NavigationStack {
-		ReserveSheetView(
-			selectedDate: .constant(.now),
-			roomId: "ws-agung",
-			onBooked: {}
-		)
-	}
+	ReserveSheetView(
+		selectedDate: .constant(.now),
+		roomId: "ws-agung",
+		onBooked: {}
+	)
 	.environment(ReservationService())
 	.environment(AuthService.shared)
 }

@@ -22,13 +22,17 @@ struct HomeView: View {
 	@State private var goToNowPulse = 0
 	@State private var jumpDate: Date? = nil
 	@State private var showDatePicker = false
-	@State private var roomsPath: [String] = []
-	@State private var bookingsPath: [String] = []
+	@State private var selectedRoomId: String? = nil
 	@State private var bookedPulse = 0
+	@State private var settledSlotState: SlotState = .open
+	@State private var lastOpenDate: Date = .now
 
 	private var availableRooms: [Room] {
-		reservationService.rooms.filter {
-			if case .available = reservationService.status(for: $0, at: selectedDate) {
+		// While the scrubber is mid-flight over a closed stretch the list keeps
+		// showing the last open moment, so nothing flashes underneath.
+		let date = slotState == .open ? selectedDate : lastOpenDate
+		return reservationService.rooms.filter {
+			if case .available = reservationService.status(for: $0, at: date) {
 				return true
 			}
 			return false
@@ -89,22 +93,29 @@ struct HomeView: View {
 			}
 		}
 		.sensoryFeedback(.success, trigger: bookedPulse)
-	}
-
-	// Booking opens as a pushed page (design: Abu), not a sheet.
-	private func reservePage(_ roomId: String) -> some View {
-		ReserveSheetView(selectedDate: $selectedDate, roomId: roomId) {
-			bookedPulse += 1
-			roomsPath.removeAll()
-			bookingsPath.removeAll()
-			tab = .bookings
+		.sheet(isPresented: Binding(
+			get: { selectedRoomId != nil },
+			set: { isPresented in
+				if !isPresented { selectedRoomId = nil }
+			}
+		)) {
+			if let roomId = selectedRoomId {
+				ReserveSheetView(selectedDate: $selectedDate, roomId: roomId) {
+					bookedPulse += 1
+					selectedRoomId = nil
+					tab = .bookings
+				}
+				.presentationDetents([.large])
+				.interactiveDismissDisabled(true)
+				.presentationDragIndicator(.hidden)
+			}
 		}
 	}
 
 	// MARK: - Free rooms
 
 	private var freeRoomsTab: some View {
-		NavigationStack(path: $roomsPath) {
+		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
 					TimelineSliderView(
@@ -119,14 +130,14 @@ struct HomeView: View {
 
 					if reservationService.isLoading && reservationService.rooms.isEmpty {
 						loadingCard
-					} else if slotState == .weekend {
+					} else if settledSlotState == .weekend {
 						emptyCard(
 							"Closed for the Weekend",
 							systemImage: "beach.umbrella",
 							description: "The space is closed on weekends. Jump to a weekday to book a room."
 						)
 						.transition(.opacity)
-					} else if slotState == .closed {
+					} else if settledSlotState == .closed {
 						emptyCard(
 							"Closed at This Time",
 							systemImage: "moon.zzz",
@@ -156,9 +167,6 @@ struct HomeView: View {
 			.navigationTitle("Available rooms")
 			.navigationBarTitleDisplayMode(.inline)
 			.navigationSubtitle(selectedDate.toHomeString())
-			.navigationDestination(for: String.self) { roomId in
-				reservePage(roomId)
-			}
 			.toolbar {
 				// Return-to-now lives top-left as a prominent capsule and only
 				// appears once the scrubber has left the current time (design: Abu).
@@ -186,8 +194,26 @@ struct HomeView: View {
 				}
 			}
 			.animation(.easeInOut(duration: 0.25), value: availableRooms)
-			.animation(.easeInOut(duration: 0.25), value: slotState)
+			.animation(.easeInOut(duration: 0.25), value: settledSlotState)
 			.animation(.easeInOut(duration: 0.2), value: isAtNow)
+			.onAppear {
+				settledSlotState = slotState
+				lastOpenDate = slotState == .open ? selectedDate : TimelineUtilities.bookableNow()
+			}
+			.onChange(of: selectedDate) { _, newDate in
+				if slotState == .open { lastOpenDate = newDate }
+			}
+			// A fling across a closed night or weekend must not flash the
+			// Closed card — it only appears once the scrubber rests there.
+			.task(id: slotState) {
+				if slotState == .open {
+					settledSlotState = .open
+				} else {
+					try? await Task.sleep(for: .milliseconds(350))
+					guard !Task.isCancelled else { return }
+					settledSlotState = slotState
+				}
+			}
 		}
 	}
 
@@ -195,10 +221,10 @@ struct HomeView: View {
 		VStack(spacing: 0) {
 			ForEach(availableRooms) { room in
 				Button {
-					roomsPath.append(room.id)
+					selectedRoomId = room.id
 				} label: {
 					HStack(spacing: 12) {
-						roomIcon(room)
+						roomIcon(room.id)
 						VStack(alignment: .leading, spacing: 2) {
 							Text(room.name)
 								.fontWeight(.semibold)
@@ -229,7 +255,7 @@ struct HomeView: View {
 	// MARK: - My bookings
 
 	private var myBookingsTab: some View {
-		NavigationStack(path: $bookingsPath) {
+		NavigationStack {
 			ScrollView {
 				VStack(spacing: 16) {
 					if reservationService.isLoading && myBookings.isEmpty {
@@ -254,9 +280,6 @@ struct HomeView: View {
 			.background(Color(uiColor: .systemGroupedBackground))
 			.navigationTitle("My bookings")
 			.navigationBarTitleDisplayMode(.inline)
-			.navigationDestination(for: String.self) { roomId in
-				reservePage(roomId)
-			}
 			.animation(.easeInOut(duration: 0.25), value: myBookings)
 		}
 	}
@@ -290,14 +313,14 @@ struct HomeView: View {
 	private func bookingRow(_ booking: Reservation) -> some View {
 		Button {
 			selectedDate = booking.startTime
-			bookingsPath.append(booking.roomId)
+			selectedRoomId = booking.roomId
 		} label: {
 			HStack(spacing: 12) {
-				rowIcon("bookmark.fill", tint: Color(uiColor: .systemBlue))
+				roomIcon(booking.roomId)
 				VStack(alignment: .leading, spacing: 2) {
 					Text(booking.title.isEmpty ? roomName(booking.roomId) : booking.title)
 						.fontWeight(.semibold)
-					statusLabel(booking.status)
+					statusLabel(booking)
 				}
 				Spacer()
 				Text("\(booking.startTime.toPickerString()) – \(booking.endTime.toPickerString())")
@@ -320,32 +343,26 @@ struct HomeView: View {
 	}
 
 	// Status reads as a colored word under the room name (design: Abu).
-	private func statusLabel(_ status: String) -> some View {
-		let (label, color): (String, Color) = switch status {
+	// One vocabulary across app and admin panel: Booked / Checked-In /
+	// Released / Cancelled — a no-show shows as Released (the outcome).
+	private func statusLabel(_ booking: Reservation) -> some View {
+		let (label, color): (String, Color) = switch booking.status {
+		case "booked" where booking.checkInStatus == "checked_in": ("Checked-In", .green)
 		case "booked": ("Booked", .blue)
-		case "released": ("Released", .orange)
-		case "no_show": ("No-show", .red)
+		case "released", "no_show": ("Released", .orange)
 		case "cancelled": ("Cancelled", .red)
-		default: (status.capitalized, .secondary)
+		default: (booking.status.capitalized, .secondary)
 		}
 		return Text(label)
 			.font(.subheadline)
 			.foregroundStyle(color)
 	}
 
-	// Every room gets its own symbol (mentor feedback), all in the app's
-	// single blue so the list stays calm; assigned from a stable hash of the
-	// workspace id so it never changes between launches and new rooms need
-	// no app update.
-	private static let iconSymbols = [
-		"mountain.2.fill", "water.waves", "leaf.fill", "sun.max.fill",
-		"moon.stars.fill", "tree.fill", "flame.fill", "tornado",
-		"bird.fill", "fish.fill",
-	]
-
-	private func roomIcon(_ room: Room) -> some View {
-		let stableHash = room.id.unicodeScalars.reduce(0) { $0 &* 31 &+ Int($1.value) }
-		return rowIcon(Self.iconSymbols[abs(stableHash) % Self.iconSymbols.count], tint: Color(uiColor: .systemBlue))
+	// Icon states what's in the room: a TV for Zoom rooms, SharePlay for the
+	// plain ones (design: Abu).
+	private func roomIcon(_ roomId: String) -> some View {
+		let isZoom = reservationService.rooms.first(where: { $0.id == roomId })?.isZoomRoom ?? false
+		return rowIcon(isZoom ? "tv" : "shareplay", tint: Color(uiColor: .systemBlue))
 	}
 
 	private func rowIcon(_ systemName: String, tint: Color) -> some View {

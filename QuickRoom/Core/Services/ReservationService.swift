@@ -96,6 +96,7 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: true,
 				status: dto.status,
+				checkInStatus: dto.checkInStatus,
 				title: dto.title,
 				startTime: dto.startTime,
 				endTime: dto.endTime
@@ -104,7 +105,7 @@ class ReservationService {
 	}
 
 	static func mapRooms(_ dtos: [RoomDTO]) -> [Room] {
-		dtos.map { Room(id: $0.zoomWorkspaceId, name: $0.name, capacity: $0.capacity) }
+		dtos.map { Room(id: $0.zoomWorkspaceId, name: $0.name, capacity: $0.capacity, isZoomRoom: $0.isZoomRoom) }
 	}
 
 	/// Only `booked` reservations block a room; no-shows, releases and
@@ -116,6 +117,7 @@ class ReservationService {
 				roomId: dto.zoomWorkspaceId,
 				isMyReservation: myUserId != nil && dto.bookedByUserId == myUserId,
 				status: dto.status,
+				checkInStatus: dto.checkInStatus,
 				title: dto.title,
 				startTime: dto.startTime,
 				endTime: dto.endTime
