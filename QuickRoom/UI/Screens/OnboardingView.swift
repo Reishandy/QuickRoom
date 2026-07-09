@@ -9,6 +9,7 @@ import SwiftUI
 import AuthenticationServices
 
 struct OnboardingView: View {
+	@Environment(\.colorScheme) private var colorScheme
 	@Environment(PreferenceService.self) private var preferenceService
 	@Environment(AuthService.self) private var authService
 
@@ -48,7 +49,7 @@ struct OnboardingView: View {
 						}
 					}
 				}
-				.signInWithAppleButtonStyle(.black)
+				.signInWithAppleButtonStyle(colorScheme == .dark ? .black : .white)
 				.frame(height: 45)
 				.clipShape(RoundedRectangle(cornerRadius: 24))
 			}
