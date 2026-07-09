@@ -78,8 +78,17 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 		manager.startRangingBeacons(satisfying: constraint)
 
 		DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+			guard let self else { return }
 			manager.stopRangingBeacons(satisfying: constraint)
-			self?.isRanging = false
+			// isRanging still true = the whole burst saw no beacon. The region
+			// state that triggered us was stale (iOS keeps reporting .inside
+			// for a while after a beacon dies) — 3 s of radio silence is the
+			// truth. Scrub server-side presence so the room frees up.
+			let sawNothing = self.isRanging
+			self.isRanging = false
+			if sawNothing {
+				Task { await self.presenceReporter.reportAbsent() }
+			}
 		}
 	}
 
@@ -93,14 +102,15 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 	func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
 		guard let beaconRegion = region as? CLBeaconRegion else { return }
 		switch state {
-		case .inside:
+		case .inside, .unknown:
+			// .inside can be stale after a beacon dies and .unknown decides
+			// nothing — either way, a ranging burst settles it: a sighting
+			// reports the enter, 3 s of silence scrubs presence.
 			beginRangingBurst(manager, uuid: beaconRegion.uuid)
 		case .outside:
 			// Definitively outside every room: scrub server-side presence,
 			// even if a lost exit made us forget which room we were in.
 			Task { await presenceReporter.reportAbsent() }
-		default:
-			break
 		}
 	}
 
