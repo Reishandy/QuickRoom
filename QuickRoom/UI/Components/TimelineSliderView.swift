@@ -203,7 +203,7 @@ struct TimelineTickView: View, Equatable {
 				.frame(width: 2, height: 16)
 
 			if tick.isLabelTick {
-				let labelText = tick.type == .weekend ? "Weekend" : "Close"
+				let labelText: LocalizedStringKey = tick.type == .weekend ? "Weekend" : "Close"
 				Text(labelText)
 					.font(.caption)
 					.foregroundStyle(Color(uiColor: .secondaryLabel).opacity(opacity))

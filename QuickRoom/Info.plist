@@ -10,5 +10,9 @@
 	<array>
 		<string>location</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to range nearby room beacons, allowing us to accurately determine which managed room you are currently in.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We continuously monitor for room beacons in the background to record when you enter or leave our managed room.</string>
 </dict>
 </plist>

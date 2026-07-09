@@ -93,8 +93,7 @@ struct VerticalTimelineView: View {
 						let startY = y(for: reservation.startTime)
 						let endY = y(for: reservation.endTime)
 						
-						let blockTitle = !reservation.title.isEmpty ? reservation.title
-							: reservation.isMyReservation ? "My Reservation" : "Reservation"
+						let blockTitle: LocalizedStringKey = !reservation.title.isEmpty ? LocalizedStringKey(reservation.title) : reservation.isMyReservation ? "My Reservation" : "Reservation"
 						
 						ReservationBlockView(
 							title: blockTitle,
@@ -299,7 +298,7 @@ struct VerticalTimelineView: View {
 }
 
 private struct ReservationBlockView: View {
-	let title: String
+	let title: LocalizedStringKey
 	let isMine: Bool
 	let isNew: Bool
 	let height: CGFloat

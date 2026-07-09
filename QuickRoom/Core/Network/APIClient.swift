@@ -15,10 +15,10 @@ enum APIError: LocalizedError {
 
 	var errorDescription: String? {
 		switch self {
-		case .unauthorized: return "Sign in to book rooms."
+		case .unauthorized: return String(localized: "Sign in to book rooms.")
 		case .conflict(let message): return message
 		case .server(_, let message): return message
-		case .transport: return "Network error. Check your connection."
+		case .transport: return String(localized: "Network error. Check your connection.")
 		}
 	}
 }
