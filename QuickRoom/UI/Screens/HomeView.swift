@@ -358,6 +358,8 @@ struct HomeView: View {
 		default: (LocalizedStringKey(booking.status.capitalized), .secondary)
 		}
 		return Text(label)
+			.font(.subheadline)
+			.foregroundStyle(color)
 	}
 
 	// Icon states what's in the room: a TV for Zoom rooms, SharePlay for the
