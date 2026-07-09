@@ -72,8 +72,12 @@ struct HomeView: View {
 		let date = DateFormatter()
 		date.dateFormat = "d MMMM"
 		let calendar = Calendar.current
-		if calendar.isDateInToday(day) { return "Today, " + date.string(from: day) }
-		if calendar.isDateInTomorrow(day) { return "Tomorrow, " + date.string(from: day) }
+		if calendar.isDateInToday(day) {
+			return String(localized: "Today, \(date.string(from: day))")
+		}
+		if calendar.isDateInTomorrow(day) {
+			return String(localized: "Tomorrow, \(date.string(from: day))")
+		}
 		let weekday = DateFormatter()
 		weekday.dateFormat = "EEEE, d MMMM"
 		return weekday.string(from: day)
@@ -346,16 +350,14 @@ struct HomeView: View {
 	// One vocabulary across app and admin panel: Booked / Checked-In /
 	// Released / Cancelled — a no-show shows as Released (the outcome).
 	private func statusLabel(_ booking: Reservation) -> some View {
-		let (label, color): (String, Color) = switch booking.status {
+		let (label, color): (LocalizedStringKey, Color) = switch booking.status {
 		case "booked" where booking.checkInStatus == "checked_in": ("Checked-In", .green)
 		case "booked": ("Booked", .blue)
 		case "released", "no_show": ("Released", .orange)
 		case "cancelled": ("Cancelled", .red)
-		default: (booking.status.capitalized, .secondary)
+		default: (LocalizedStringKey(booking.status.capitalized), .secondary)
 		}
 		return Text(label)
-			.font(.subheadline)
-			.foregroundStyle(color)
 	}
 
 	// Icon states what's in the room: a TV for Zoom rooms, SharePlay for the
@@ -373,7 +375,7 @@ struct HomeView: View {
 			.background(tint.gradient, in: Circle())
 	}
 
-	private func emptyCard(_ title: String, systemImage: String, description: String) -> some View {
+	private func emptyCard(_ title: LocalizedStringKey, systemImage: String, description: LocalizedStringKey) -> some View {
 		ContentUnavailableView(title, systemImage: systemImage, description: Text(description))
 			.frame(maxWidth: .infinity)
 			.frame(minHeight: 320)

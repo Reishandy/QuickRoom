@@ -25,10 +25,6 @@ struct ContentView: View {
 		!locationPermissionService.isFullyAuthorized || !notificationPermissionService.isFullyAuthorized
 	}
 
-	// TODO: Info.plist wording
-	// TODO: Design tweak (color, spacing, etc)
-	// TODO: Loading state for UI
-	// TODO: Fetch new reservation with gesture?
 	var body: some View {
 		Group {
 			if preferenceService.hasSeenOnboarding && authService.isSignedIn {

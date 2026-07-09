@@ -1,0 +1,93 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "CFBundleName" : {
+      "comment" : "Bundle name",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickRoom"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickRoom"
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickRoom"
+          }
+        },
+        "uz-UZ" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "QuickRoom"
+          }
+        }
+      }
+    },
+    "NSLocationAlwaysAndWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location Always and When In Use Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We continuously monitor for room beacons in the background to record when you enter or leave our managed room."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami memantau beacon ruangan di latar belakang untuk mencatat kapan Anda memasuki atau keluar dari ruangan rapat yang kami kelola."
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biz boshqaradigan majlislar xonalariga qachon kirganingiz yoki chiqqaningizni qayd etish uchun fonda xona beaconlarini doimiy ravishda kuzatib boramiz."
+          }
+        },
+        "uz-UZ" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Biz boshqaradigan majlislar xonalariga qachon kirganingiz yoki chiqqaningizni qayd etish uchun fonda xona beaconlarini doimiy ravishda kuzatib boramiz."
+          }
+        }
+      }
+    },
+    "NSLocationWhenInUseUsageDescription" : {
+      "comment" : "Privacy - Location When In Use Usage Description",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We use your location to range nearby room beacons, allowing us to accurately determine which managed room you are currently in."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kami menggunakan lokasi Anda untuk mendeteksi beacon ruangan terdekat agar dapat menentukan dengan akurat ruang rapat mana yang sedang Anda gunakan."
+          }
+        },
+        "uz" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz ayni paytda qaysi majlislar xonasida ekanligingizni aniq aniqlash uchun yaqin atrofdagi xona beaconlarini aniqlashda joylashuvingizdan foydalanamiz."
+          }
+        },
+        "uz-UZ" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Siz ayni paytda qaysi majlislar xonasida ekanligingizni aniq aniqlash uchun yaqin atrofdagi xona beaconlarini aniqlashda joylashuvingizdan foydalanamiz."
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.2"
+}

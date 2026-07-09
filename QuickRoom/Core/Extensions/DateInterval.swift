@@ -21,16 +21,16 @@ extension DateInterval {
 		let timeRangeStr = "\(startStr) - \(endStr)"
 		
 		if calendar.isDateInToday(self.start) {
-			return "Today at \(timeRangeStr)"
+			return String(localized: "Today at \(timeRangeStr)")
 		} else if calendar.isDateInTomorrow(self.start) {
-			return "Tomorrow at \(timeRangeStr)"
+			return String(localized: "Tomorrow at \(timeRangeStr)")
 		} else {
 			let dateFormatter = DateFormatter()
 			dateFormatter.locale = locale
 			dateFormatter.dateFormat = "d MMMM"
 			let dateStr = dateFormatter.string(from: self.start)
 			
-			return "\(dateStr) at \(timeRangeStr)"
+			return String(localized: "\(dateStr) at \(timeRangeStr)")
 		}
 	}
 }

@@ -9,11 +9,12 @@ import SwiftUI
 import AuthenticationServices
 
 struct OnboardingView: View {
+	@Environment(\.colorScheme) private var colorScheme
 	@Environment(PreferenceService.self) private var preferenceService
 	@Environment(AuthService.self) private var authService
-
+	
 	@State private var signInErrorMessage: String?
-
+	
 	var body: some View {
 		VStack(alignment: .leading) {
 			VStack(alignment: .leading, spacing: 14) {
@@ -25,14 +26,20 @@ struct OnboardingView: View {
 			}
 			
 			Spacer()
-
+			
 			if authService.isSignedIn {
 				Button {
 					preferenceService.hasSeenOnboarding = true
 				} label: {
-					Text("Continue as \(authService.currentUser?.name ?? "User")")
-						.padding(.vertical, 6)
-						.frame(maxWidth: .infinity)
+					Group {
+						if let userName = authService.currentUser?.name {
+							Text("Continue as \(userName)")
+						} else {
+							Text("Continue as User")
+						}
+					}
+					.padding(.vertical, 6)
+					.frame(maxWidth: .infinity)
 				}
 				.buttonStyle(.borderedProminent)
 			} else {
@@ -48,7 +55,7 @@ struct OnboardingView: View {
 						}
 					}
 				}
-				.signInWithAppleButtonStyle(.black)
+				.signInWithAppleButtonStyle(colorScheme == .dark ? .black : .white)
 				.frame(height: 45)
 				.clipShape(RoundedRectangle(cornerRadius: 24))
 			}

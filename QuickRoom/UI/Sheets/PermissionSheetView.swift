@@ -15,7 +15,7 @@ struct PermissionSheetView: View {
 		!locationPermissionService.isNotDetermined || !notificationPermissionService.isNotDetermined
 	}
 	
-    var body: some View {
+	var body: some View {
 		VStack(spacing: 32) {
 			Spacer()
 			
@@ -28,9 +28,10 @@ struct PermissionSheetView: View {
 					.bold()
 					.multilineTextAlignment(.center)
 				
-				Text("We need a few permissions from you to make our app works and helps you manage your resrvations,")
+				Text("We need a few permissions from you to make our app work and help you manage your bookings.")
 					.foregroundStyle(.secondary)
 					.multilineTextAlignment(.center)
+					.fixedSize(horizontal: false, vertical: true)
 			}
 			
 			
@@ -46,7 +47,7 @@ struct PermissionSheetView: View {
 					iconName: "bell.fill",
 					isGranted: notificationPermissionService.isAuthorized,
 					title: "Allow Notifications",
-					description: "We need your notification permission to let you know of upoming reservations, rservation ending, auto release notifications, and more."
+					description: "We need your notification permission to let you know of upoming bookings, rservation ending, auto release notifications, and more."
 				)
 				
 				PermissionRowView(
@@ -76,21 +77,27 @@ struct PermissionSheetView: View {
 					}
 				}
 			} label: {
-				Text(shouldShowSettingsRedirect ? "Go to settings" : "Grant permissions")
-					.padding(.vertical, 6)
-					.frame(maxWidth: .infinity)
+				Group {
+					if shouldShowSettingsRedirect {
+						Text("Go to settings")
+					} else {
+						Text("Grant permissions")
+					}
+				}
+				.padding(.vertical, 6)
+				.frame(maxWidth: .infinity)
 			}
 			.buttonStyle(.borderedProminent)
 		}
 		.padding(20)
-    }
+	}
 }
 
 struct PermissionRowView: View {
 	let iconName: String
 	let isGranted: Bool
-	let title: String
-	let description: String
+	let title: LocalizedStringKey
+	let description: LocalizedStringKey
 	
 	var body: some View {
 		HStack(alignment: .center, spacing: 16) {
