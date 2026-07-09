@@ -46,4 +46,17 @@ final class BeaconDirectory {
 			print("BeaconDirectory: refresh failed: \(error)")
 		}
 	}
+
+	/// Every known room beacon identity — the basis for per-room region
+	/// monitoring. Refreshes when the cache is empty.
+	func allBeacons() async -> [(major: Int, minor: Int)] {
+		if cache.isEmpty {
+			await refresh()
+		}
+		return cache.keys.compactMap { key in
+			let parts = key.split(separator: "/")
+			guard parts.count == 2, let major = Int(parts[0]), let minor = Int(parts[1]) else { return nil }
+			return (major, minor)
+		}
+	}
 }

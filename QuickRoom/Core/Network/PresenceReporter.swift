@@ -31,6 +31,21 @@ final class PresenceReporter {
 		await send(workspaceId: workspaceId, eventType: "entered")
 	}
 
+	/// Targeted exit for a specific room region (per-room monitoring knows
+	/// exactly which beacon's range was left).
+	func reportExit(major: Int, minor: Int) async {
+		guard let workspaceId = await directory.workspaceId(major: major, minor: minor) else { return }
+		for attempt in 0..<3 {
+			if attempt > 0 { try? await Task.sleep(for: .seconds(2)) }
+			if await send(workspaceId: workspaceId, eventType: "exited") {
+				if UserDefaults.standard.string(forKey: Self.lastWorkspaceKey) == workspaceId {
+					UserDefaults.standard.removeObject(forKey: Self.lastWorkspaceKey)
+				}
+				return
+			}
+		}
+	}
+
 	func reportExit() async {
 		guard let workspaceId = UserDefaults.standard.string(forKey: Self.lastWorkspaceKey) else { return }
 		// Forget the room only once the backend heard the exit. Clearing first

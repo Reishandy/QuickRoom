@@ -18,6 +18,14 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 	private var isRanging = false
 	private let targetUUID = AppConfig.Beacon.proximityUUID
 	private let presenceReporter = PresenceReporter()
+	private let directory = BeaconDirectory.shared
+
+	// Room regions are named "room|<major>|<minor>" so a background region
+	// event identifies its room WITHOUT ranging — iOS doesn't range in the
+	// background, which is why a burst-based enter only worked with the app
+	// open in hand. The UUID-wide region stays as the foreground reconciler
+	// and the catch-all for beacons the directory doesn't know yet.
+	private static let roomPrefix = "room|"
 
 	private override init() {
 		super.init()
@@ -35,18 +43,27 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 			forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main
 		) { [weak self] _ in
 			self?.requestStateSync()
+			Task { await self?.syncRoomRegions(refresh: true) }
 		}
 	}
 
-	private func monitoredBeaconRegion() -> CLBeaconRegion? {
+	private func uuidRegion() -> CLBeaconRegion? {
 		locationManager.monitoredRegions
 			.compactMap { $0 as? CLBeaconRegion }
-			.first { $0.uuid == targetUUID }
+			.first { $0.identifier == targetUUID.uuidString }
+	}
+
+	private static func roomIdentity(from identifier: String) -> (major: Int, minor: Int)? {
+		guard identifier.hasPrefix(roomPrefix) else { return nil }
+		let parts = identifier.dropFirst(roomPrefix.count).split(separator: "|")
+		guard parts.count == 2, let major = Int(parts[0]), let minor = Int(parts[1]) else { return nil }
+		return (major, minor)
 	}
 
 	private func requestStateSync() {
-		guard let region = monitoredBeaconRegion() else { return }
-		locationManager.requestState(for: region)
+		for region in locationManager.monitoredRegions where region is CLBeaconRegion {
+			locationManager.requestState(for: region)
+		}
 	}
 
 	func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
@@ -56,19 +73,50 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 	}
 
 	private func startMonitoring() {
-		if monitoredBeaconRegion() != nil {
-			requestStateSync() // already monitoring — still reconcile the state
-			return
+		if uuidRegion() == nil {
+			let constraint = CLBeaconIdentityConstraint(uuid: targetUUID)
+			let region = CLBeaconRegion(beaconIdentityConstraint: constraint, identifier: targetUUID.uuidString)
+			region.notifyOnEntry = true
+			region.notifyOnExit = true
+			locationManager.startMonitoring(for: region)
 		}
+		requestStateSync()
+		Task { await syncRoomRegions(refresh: false) }
+	}
 
-		let constraint = CLBeaconIdentityConstraint(uuid: targetUUID)
-		let region = CLBeaconRegion(beaconIdentityConstraint: constraint, identifier: targetUUID.uuidString)
+	/// Registers one region per known room beacon (and drops regions for
+	/// beacons that no longer exist). Region events then carry the room
+	/// identity, so background enters/exits work with the app closed.
+	private func syncRoomRegions(refresh: Bool) async {
+		if refresh {
+			await directory.refresh()
+		}
+		let beacons = await directory.allBeacons()
+		await MainActor.run {
+			let wanted = Dictionary(uniqueKeysWithValues: beacons.map {
+				("\(Self.roomPrefix)\($0.major)|\($0.minor)", $0)
+			})
+			let existing = locationManager.monitoredRegions
+				.compactMap { $0 as? CLBeaconRegion }
+				.filter { $0.identifier.hasPrefix(Self.roomPrefix) }
 
-		region.notifyOnEntry = true
-		region.notifyOnExit = true
-
-		locationManager.startMonitoring(for: region)
-		locationManager.requestState(for: region)
+			for region in existing where wanted[region.identifier] == nil {
+				locationManager.stopMonitoring(for: region)
+			}
+			let existingIds = Set(existing.map(\.identifier))
+			for (id, beacon) in wanted where !existingIds.contains(id) {
+				let constraint = CLBeaconIdentityConstraint(
+					uuid: targetUUID,
+					major: CLBeaconMajorValue(beacon.major),
+					minor: CLBeaconMinorValue(beacon.minor)
+				)
+				let region = CLBeaconRegion(beaconIdentityConstraint: constraint, identifier: id)
+				region.notifyOnEntry = true
+				region.notifyOnExit = true
+				locationManager.startMonitoring(for: region)
+				locationManager.requestState(for: region)
+			}
+		}
 	}
 
 	private func beginRangingBurst(_ manager: CLLocationManager, uuid: UUID) {
@@ -80,13 +128,13 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 		DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
 			guard let self else { return }
 			manager.stopRangingBeacons(satisfying: constraint)
-			// isRanging still true = the whole burst saw no beacon. The region
-			// state that triggered us was stale (iOS keeps reporting .inside
-			// for a while after a beacon dies) — 3 s of radio silence is the
-			// truth. Scrub server-side presence so the room frees up.
+			// isRanging still true = the whole burst saw no beacon. In the
+			// foreground that's the truth (the region state that triggered us
+			// was stale) — scrub server-side presence. In the background iOS
+			// doesn't deliver ranging at all, so silence proves nothing.
 			let sawNothing = self.isRanging
 			self.isRanging = false
-			if sawNothing {
+			if sawNothing && UIApplication.shared.applicationState == .active {
 				Task { await self.presenceReporter.reportAbsent() }
 			}
 		}
@@ -94,18 +142,31 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 
 	func locationManager(_ manager: CLLocationManager, didEnterRegion region: CLRegion) {
 		guard let beaconRegion = region as? CLBeaconRegion else { return }
-		beginRangingBurst(manager, uuid: beaconRegion.uuid)
+		if let room = Self.roomIdentity(from: region.identifier) {
+			// Background-safe: the region itself says which room.
+			Task { await presenceReporter.reportEnter(major: room.major, minor: room.minor) }
+		} else {
+			beginRangingBurst(manager, uuid: beaconRegion.uuid)
+		}
 	}
 
 	// Fires after requestState(for:) and on OS-initiated state re-evaluations —
 	// the only path that reports presence when we were inside all along.
 	func locationManager(_ manager: CLLocationManager, didDetermineState state: CLRegionState, for region: CLRegion) {
 		guard let beaconRegion = region as? CLBeaconRegion else { return }
+		if let room = Self.roomIdentity(from: region.identifier) {
+			// Only act on .inside: every OTHER room answers .outside on each
+			// sync, and those say nothing about where we actually are.
+			if state == .inside {
+				Task { await presenceReporter.reportEnter(major: room.major, minor: room.minor) }
+			}
+			return
+		}
 		switch state {
 		case .inside, .unknown:
 			// .inside can be stale after a beacon dies and .unknown decides
 			// nothing — either way, a ranging burst settles it: a sighting
-			// reports the enter, 3 s of silence scrubs presence.
+			// reports the enter, 3 s of silence (foreground) scrubs presence.
 			beginRangingBurst(manager, uuid: beaconRegion.uuid)
 		case .outside:
 			// Definitively outside every room: scrub server-side presence,
@@ -116,9 +177,11 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 
 	func locationManager(_ manager: CLLocationManager, didExitRegion region: CLRegion) {
 		guard region is CLBeaconRegion else { return }
-
-		Task {
-			await presenceReporter.reportExit()
+		if let room = Self.roomIdentity(from: region.identifier) {
+			Task { await presenceReporter.reportExit(major: room.major, minor: room.minor) }
+		} else {
+			// Left the whole beacon region — we're nowhere.
+			Task { await presenceReporter.reportAbsent() }
 		}
 	}
 
