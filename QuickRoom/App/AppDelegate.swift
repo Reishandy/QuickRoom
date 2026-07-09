@@ -8,6 +8,12 @@
 import UIKit
 import UserNotifications
 
+extension Notification.Name {
+	/// Fired when a push arrives (foreground) or is tapped — server state
+	/// changed, so listeners refetch instead of waiting for the next poll.
+	static let quickRoomPushReceived = Notification.Name("quickRoomPushReceived")
+}
+
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 	func application(_ application: UIApplication,
 		didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
@@ -22,7 +28,15 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 	// booker watching the app after booking never saw "Are you coming?".
 	func userNotificationCenter(_ center: UNUserNotificationCenter,
 		willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
-		[.banner, .list, .sound]
+		NotificationCenter.default.post(name: .quickRoomPushReceived, object: nil)
+		return [.banner, .list, .sound]
+	}
+
+	// A tapped notification opens the app on data the push was about —
+	// refetch immediately rather than waiting for the poll.
+	func userNotificationCenter(_ center: UNUserNotificationCenter,
+		didReceive response: UNNotificationResponse) async {
+		NotificationCenter.default.post(name: .quickRoomPushReceived, object: nil)
 	}
 
 	func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
