@@ -30,8 +30,9 @@ final class APIClient {
 	private let session: URLSession
 	private let tokenProvider: () -> String?
 
-	/// Fired on any 401 so AuthService can drop the dead session. Set once at
-	/// AuthService init; called off the main actor.
+	/// Fired on a 401 for a request that carried a token, so AuthService can
+	/// drop the dead session. Set once at AuthService init; called off the
+	/// main actor.
 	var onUnauthorized: (() -> Void)?
 
 	init(baseURL: URL, session: URLSession = .shared, tokenProvider: @escaping () -> String?) {
@@ -63,7 +64,8 @@ final class APIClient {
 			request.httpBody = try Self.encoder.encode(body)
 			request.setValue("application/json", forHTTPHeaderField: "Content-Type")
 		}
-		if let token = tokenProvider() {
+		let token = tokenProvider()
+		if let token {
 			request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 		}
 
@@ -80,7 +82,13 @@ final class APIClient {
 			let message = (try? Self.decoder.decode(ServerErrorBody.self, from: data))?.error ?? "Request failed (\(status))"
 			switch status {
 			case 401:
-				onUnauthorized?()
+				// Only a rejected token means the session is dead. A 401 on a
+				// request that carried no token (keychain unreadable during a
+				// locked-phone background wakeup) must not wipe the session —
+				// that was signing users out overnight.
+				if token != nil {
+					onUnauthorized?()
+				}
 				throw APIError.unauthorized
 			case 409: throw APIError.conflict(message)
 			default: throw APIError.server(status: status, message: message)

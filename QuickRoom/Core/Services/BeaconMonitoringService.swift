@@ -96,8 +96,9 @@ final class BeaconMonitoringService: NSObject, CLLocationManagerDelegate {
 		case .inside:
 			beginRangingBurst(manager, uuid: beaconRegion.uuid)
 		case .outside:
-			// No-op unless we previously reported an enter (reportExit guards).
-			Task { await presenceReporter.reportExit() }
+			// Definitively outside every room: scrub server-side presence,
+			// even if a lost exit made us forget which room we were in.
+			Task { await presenceReporter.reportAbsent() }
 		default:
 			break
 		}

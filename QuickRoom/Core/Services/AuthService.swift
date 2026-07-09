@@ -21,6 +21,7 @@ final class AuthService {
 
 	init(client: APIClient = .shared) {
 		self.client = client
+		KeychainStore.migrateAccessibility()
 		if KeychainStore.sessionToken != nil, let json = KeychainStore.currentUserJSON {
 			currentUser = try? JSONDecoder().decode(UserDTO.self, from: Data(json.utf8))
 		}
