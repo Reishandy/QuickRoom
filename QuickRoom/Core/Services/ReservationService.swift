@@ -23,6 +23,13 @@ class ReservationService {
 	init(client: APIClient = .shared, auth: AuthService = .shared) {
 		self.client = client
 		self.auth = auth
+		// Live updates between the 30s poll ticks: a push means server state
+		// changed right now, and a foreground return means we're stale.
+		for name: Notification.Name in [.quickRoomPushReceived, UIApplication.willEnterForegroundNotification] {
+			NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+				Task { await self?.refreshNow() }
+			}
+		}
 	}
 
 	// TODO: Reservation rule
